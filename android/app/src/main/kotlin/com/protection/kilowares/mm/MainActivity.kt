@@ -1,6 +1,7 @@
 package com.protection.kilowares.mm
 
 import android.Manifest
+import android.content.SharedPreferences
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
@@ -8,12 +9,18 @@ import android.content.pm.PackageManager
 import android.app.AppOpsManager
 import android.content.Context
 import android.provider.Settings
+import android.util.Base64
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import java.io.ByteArrayOutputStream
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 
 class MainActivity : FlutterActivity() {
     private val channelName = "privacy_protection"
+    private val prefsName = "privacy_protection_prefs"
+    private val keyProtected = "protected_packages"
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -54,6 +61,40 @@ class MainActivity : FlutterActivity() {
                 }
                 "isOverlayActive" -> {
                     result.success(OverlayService.isServiceActive)
+                }
+                "getInstalledLaunchableApps" -> {
+                    val pm = packageManager
+                    val intent = Intent(Intent.ACTION_MAIN).apply { addCategory(Intent.CATEGORY_LAUNCHER) }
+                    val resolveInfos = pm.queryIntentActivities(intent, PackageManager.MATCH_DEFAULT_ONLY)
+                    val list = resolveInfos.map { ri ->
+                        val pkg = ri.activityInfo.packageName
+                        val appName = ri.loadLabel(pm).toString()
+                        val iconDrawable = ri.loadIcon(pm)
+                        val bmp = Bitmap.createBitmap(
+                            iconDrawable.intrinsicWidth.coerceAtLeast(1),
+                            iconDrawable.intrinsicHeight.coerceAtLeast(1),
+                            Bitmap.Config.ARGB_8888
+                        )
+                        val canvas = Canvas(bmp)
+                        iconDrawable.setBounds(0, 0, canvas.width, canvas.height)
+                        iconDrawable.draw(canvas)
+                        val baos = ByteArrayOutputStream()
+                        bmp.compress(Bitmap.CompressFormat.PNG, 100, baos)
+                        val b64 = Base64.encodeToString(baos.toByteArray(), Base64.NO_WRAP)
+                        mapOf("packageName" to pkg, "appName" to appName, "iconBase64" to b64)
+                    }
+                    result.success(list)
+                }
+                "saveProtectedApps" -> {
+                    val packages = (call.arguments as? List<*>)?.map { it.toString() } ?: emptyList()
+                    val prefs = getSharedPreferences(prefsName, Context.MODE_PRIVATE)
+                    prefs.edit().putStringSet(keyProtected, packages.toSet()).apply()
+                    result.success(true)
+                }
+                "getProtectedApps" -> {
+                    val prefs = getSharedPreferences(prefsName, Context.MODE_PRIVATE)
+                    val set = prefs.getStringSet(keyProtected, emptySet()) ?: emptySet()
+                    result.success(set.toList())
                 }
                 else -> result.notImplemented()
             }

@@ -8,6 +8,7 @@ import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.content.SharedPreferences
 import android.graphics.Color
 import android.os.Build
 import android.os.IBinder
@@ -36,6 +37,9 @@ class OverlayService : Service() {
     private var monitorRunnable: Runnable? = null
     private var launcherPackages: Set<String> = emptySet()
     private var lastTopPackage: String? = null
+    private var protectedPackages: Set<String> = emptySet()
+    private lateinit var prefs: SharedPreferences
+    private val keyProtected = "protected_packages"
 
     override fun onCreate() {
         super.onCreate()
@@ -43,6 +47,8 @@ class OverlayService : Service() {
         startForeground(NOTIFICATION_ID, buildNotification())
         wm = getSystemService(Context.WINDOW_SERVICE) as WindowManager
         isServiceActive = true
+        prefs = getSharedPreferences("privacy_protection_prefs", Context.MODE_PRIVATE)
+        protectedPackages = prefs.getStringSet(keyProtected, emptySet()) ?: emptySet()
         launcherPackages = queryLauncherPackages()
         startMonitoring()
     }
@@ -70,10 +76,12 @@ class OverlayService : Service() {
                     lastTopPackage = newTop
                 }
                 val top = lastTopPackage
+                protectedPackages = prefs.getStringSet(keyProtected, emptySet()) ?: emptySet()
                 val shouldShow = top != null &&
                         top != packageName &&
                         isClickableApp(top) &&
-                        !launcherPackages.contains(top)
+                        !launcherPackages.contains(top) &&
+                        protectedPackages.contains(top)
                 if (shouldShow) {
                     showOverlay()
                 } else if (top != null) {
