@@ -3,6 +3,8 @@
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <!-- Optional for Android 13+ notification display -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Usage stats permission; user must grant access in Settings -->
+    <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS" />
     <application
         android:label="Privacy Protection"
         android:name="${applicationName}"

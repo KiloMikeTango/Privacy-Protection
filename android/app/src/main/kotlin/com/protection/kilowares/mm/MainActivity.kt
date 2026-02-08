@@ -5,6 +5,8 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.content.pm.PackageManager
+import android.app.AppOpsManager
+import android.content.Context
 import android.provider.Settings
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -31,6 +33,11 @@ class MainActivity : FlutterActivity() {
                                 return@setMethodCallHandler
                             }
                         }
+                        if (!hasUsageAccess()) {
+                            startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
+                            result.success(false)
+                            return@setMethodCallHandler
+                        }
                         val serviceIntent = Intent(this, OverlayService::class.java)
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                             startForegroundService(serviceIntent)
@@ -46,10 +53,20 @@ class MainActivity : FlutterActivity() {
                     result.success(true)
                 }
                 "isOverlayActive" -> {
-                    result.success(OverlayService.isOverlayShowing)
+                    result.success(OverlayService.isServiceActive)
                 }
                 else -> result.notImplemented()
             }
         }
+    }
+
+    private fun hasUsageAccess(): Boolean {
+        val appOps = getSystemService(Context.APP_OPS_SERVICE) as AppOpsManager
+        val mode = appOps.checkOpNoThrow(
+            AppOpsManager.OPSTR_GET_USAGE_STATS,
+            android.os.Process.myUid(),
+            packageName
+        )
+        return mode == AppOpsManager.MODE_ALLOWED
     }
 }

@@ -38,7 +38,8 @@ class _OverlayScreenState extends State<OverlayScreen> {
 
   Future<void> _refreshState() async {
     try {
-      final bool active = await _channel.invokeMethod<bool>('isOverlayActive') ?? false;
+      final bool active =
+          await _channel.invokeMethod<bool>('isOverlayActive') ?? false;
       setState(() => _active = active);
     } catch (e) {
       setState(() => _message = 'Status error: $e');
@@ -53,10 +54,12 @@ class _OverlayScreenState extends State<OverlayScreen> {
     });
     try {
       if (value) {
-        final bool granted = await _channel.invokeMethod<bool>('enableOverlay') ?? false;
+        final bool granted =
+            await _channel.invokeMethod<bool>('enableOverlay') ?? false;
         if (!granted) {
           setState(() {
-            _message = 'Please grant “Draw over other apps” permission.';
+            _message =
+                'Please grant “Draw over other apps” and “Usage Access” permissions.';
           });
         }
       } else {

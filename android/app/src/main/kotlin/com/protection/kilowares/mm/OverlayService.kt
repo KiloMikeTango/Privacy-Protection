@@ -7,9 +7,14 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.graphics.Color
 import android.os.Build
 import android.os.IBinder
+import android.os.Handler
+import android.os.Looper
+import android.app.usage.UsageEvents
+import android.app.usage.UsageStatsManager
 import android.view.Gravity
 import android.view.View
 import android.view.WindowManager
@@ -21,29 +26,106 @@ class OverlayService : Service() {
         const val NOTIFICATION_ID = 1001
         @Volatile
         var isOverlayShowing: Boolean = false
+        @Volatile
+        var isServiceActive: Boolean = false
     }
 
     private var wm: WindowManager? = null
     private var overlayView: View? = null
+    private val handler = Handler(Looper.getMainLooper())
+    private var monitorRunnable: Runnable? = null
+    private var launcherPackages: Set<String> = emptySet()
+    private var lastTopPackage: String? = null
 
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
         startForeground(NOTIFICATION_ID, buildNotification())
         wm = getSystemService(Context.WINDOW_SERVICE) as WindowManager
+        isServiceActive = true
+        launcherPackages = queryLauncherPackages()
+        startMonitoring()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        showOverlay()
+        // Monitoring will decide when to show/hide the overlay
         return START_STICKY
     }
 
     override fun onDestroy() {
         hideOverlay()
+        isServiceActive = false
+        stopMonitoring()
         super.onDestroy()
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
+
+    private fun startMonitoring() {
+        if (monitorRunnable != null) return
+        monitorRunnable = Runnable {
+            try {
+                val newTop = getTopPackage()
+                if (newTop != null) {
+                    lastTopPackage = newTop
+                }
+                val top = lastTopPackage
+                val shouldShow = top != null &&
+                        top != packageName &&
+                        isClickableApp(top) &&
+                        !launcherPackages.contains(top)
+                if (shouldShow) {
+                    showOverlay()
+                } else if (top != null) {
+                    hideOverlay()
+                }
+            } catch (_: Exception) {
+                // Ignore for PoC
+            } finally {
+                handler.postDelayed(monitorRunnable!!, 500)
+            }
+        }
+        handler.post(monitorRunnable!!)
+    }
+
+    private fun stopMonitoring() {
+        monitorRunnable?.let { handler.removeCallbacks(it) }
+        monitorRunnable = null
+    }
+
+    private fun getTopPackage(): String? {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            val usm = getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
+            val end = System.currentTimeMillis()
+            val begin = end - 60_000
+            val events = usm.queryEvents(begin, end)
+            var lastPkg: String? = null
+            val event = UsageEvents.Event()
+            while (events.hasNextEvent()) {
+                events.getNextEvent(event)
+                if (event.eventType == UsageEvents.Event.MOVE_TO_FOREGROUND ||
+                    event.eventType == UsageEvents.Event.ACTIVITY_RESUMED) {
+                    lastPkg = event.packageName
+                }
+            }
+            return lastPkg
+        }
+        return null
+    }
+
+    private fun isClickableApp(pkg: String): Boolean {
+        return try {
+            packageManager.getLaunchIntentForPackage(pkg) != null
+        } catch (_: Exception) { false }
+    }
+
+    private fun queryLauncherPackages(): Set<String> {
+        val intent = Intent(Intent.ACTION_MAIN).apply {
+            addCategory(Intent.CATEGORY_HOME)
+        }
+        val resolveInfos = packageManager.queryIntentActivities(intent, PackageManager.MATCH_DEFAULT_ONLY)
+        return resolveInfos.mapNotNull { it.activityInfo?.packageName }.toSet()
+    }
 
     private fun showOverlay() {
         if (isOverlayShowing) return
@@ -78,10 +160,6 @@ class OverlayService : Service() {
         }
         overlayView = null
         isOverlayShowing = false
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            stopForeground(STOP_FOREGROUND_REMOVE)
-        }
-        stopSelf()
     }
 
     private fun buildNotification(): Notification {
