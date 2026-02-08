@@ -64,24 +64,25 @@ class MainActivity : FlutterActivity() {
                 }
                 "getInstalledLaunchableApps" -> {
                     val pm = packageManager
-                    val intent = Intent(Intent.ACTION_MAIN).apply { addCategory(Intent.CATEGORY_LAUNCHER) }
-                    val resolveInfos = pm.queryIntentActivities(intent, PackageManager.MATCH_DEFAULT_ONLY)
-                    val list = resolveInfos.map { ri ->
-                        val pkg = ri.activityInfo.packageName
-                        val appName = ri.loadLabel(pm).toString()
-                        val iconDrawable = ri.loadIcon(pm)
-                        val bmp = Bitmap.createBitmap(
-                            iconDrawable.intrinsicWidth.coerceAtLeast(1),
-                            iconDrawable.intrinsicHeight.coerceAtLeast(1),
-                            Bitmap.Config.ARGB_8888
-                        )
-                        val canvas = Canvas(bmp)
-                        iconDrawable.setBounds(0, 0, canvas.width, canvas.height)
-                        iconDrawable.draw(canvas)
-                        val baos = ByteArrayOutputStream()
-                        bmp.compress(Bitmap.CompressFormat.PNG, 100, baos)
-                        val b64 = Base64.encodeToString(baos.toByteArray(), Base64.NO_WRAP)
-                        mapOf("packageName" to pkg, "appName" to appName, "iconBase64" to b64)
+                    val apps = pm.getInstalledApplications(0)
+                    val list = mutableListOf<Map<String, String>>()
+                    for (ai in apps) {
+                        val pkg = ai.packageName
+                        val launchIntent = pm.getLaunchIntentForPackage(pkg)
+                        if (launchIntent != null) {
+                            val appName = ai.loadLabel(pm).toString()
+                            val iconDrawable = ai.loadIcon(pm)
+                            val width = iconDrawable.intrinsicWidth.takeIf { it > 0 } ?: 48
+                            val height = iconDrawable.intrinsicHeight.takeIf { it > 0 } ?: 48
+                            val bmp = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+                            val canvas = Canvas(bmp)
+                            iconDrawable.setBounds(0, 0, canvas.width, canvas.height)
+                            iconDrawable.draw(canvas)
+                            val baos = ByteArrayOutputStream()
+                            bmp.compress(Bitmap.CompressFormat.PNG, 100, baos)
+                            val b64 = Base64.encodeToString(baos.toByteArray(), Base64.NO_WRAP)
+                            list.add(mapOf("packageName" to pkg, "appName" to appName, "iconBase64" to b64))
+                        }
                     }
                     result.success(list)
                 }
