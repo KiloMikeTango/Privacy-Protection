@@ -13,6 +13,11 @@ class ProtectedAppsScreen extends StatefulWidget {
 }
 
 class _ProtectedAppsScreenState extends State<ProtectedAppsScreen> {
+  GlobalKey<SliverAnimatedListState> _listKeyProtected = GlobalKey();
+  GlobalKey<SliverAnimatedListState> _listKeyUnprotected = GlobalKey();
+  List<AppInfo> _protectedListData = [];
+  List<AppInfo> _unprotectedListData = [];
+
   static const MethodChannel _channel = MethodChannel('privacy_protection');
   final TextEditingController _searchCtrl = TextEditingController();
   List<AppInfo> _apps = [];
@@ -85,6 +90,22 @@ class _ProtectedAppsScreenState extends State<ProtectedAppsScreen> {
       _apps = appsRaw
           .map((e) => AppInfo.fromMap(Map<String, dynamic>.from(e as Map)))
           .toList();
+
+      // Sort and split for the animated lists
+      _apps.sort(
+        (a, b) => a.appName.toLowerCase().compareTo(b.appName.toLowerCase()),
+      );
+
+      _protectedListData = _apps
+          .where((a) => _protected.contains(a.packageName))
+          .toList();
+      _unprotectedListData = _apps
+          .where((a) => !_protected.contains(a.packageName))
+          .toList();
+
+      // Re-initialize keys to ensure fresh lists on reload
+      _listKeyProtected = GlobalKey();
+      _listKeyUnprotected = GlobalKey();
     } catch (e) {
       _message = 'Load error: $e';
     } finally {
@@ -94,14 +115,7 @@ class _ProtectedAppsScreenState extends State<ProtectedAppsScreen> {
     }
   }
 
-  Future<void> _toggle(String pkg, bool value) async {
-    setState(() {
-      if (value) {
-        _protected.add(pkg);
-      } else {
-        _protected.remove(pkg);
-      }
-    });
+  Future<void> _save() async {
     try {
       await _channel.invokeMethod('saveProtectedApps', _protected.toList());
     } catch (e) {
@@ -111,12 +125,87 @@ class _ProtectedAppsScreenState extends State<ProtectedAppsScreen> {
     }
   }
 
+  Future<void> _toggle(AppInfo app, bool value) async {
+    // 1. Update persisted set immediately (source of truth)
+    if (value) {
+      _protected.add(app.packageName);
+    } else {
+      _protected.remove(app.packageName);
+    }
+
+    // 2. Trigger save
+    _save();
+
+    // 3. Update UI
+    // If searching, we just setState to update the filtered view
+    if (_query.trim().isNotEmpty) {
+      setState(() {});
+      return;
+    }
+
+    // If not searching, we animate the move
+    if (value) {
+      // Move from Unprotected -> Protected
+      final removeIndex = _unprotectedListData.indexOf(app);
+      if (removeIndex != -1) {
+        _unprotectedListData.removeAt(removeIndex);
+        _listKeyUnprotected.currentState?.removeItem(
+          removeIndex,
+          (context, animation) => _buildRemovedItem(app, animation, false),
+          duration: const Duration(milliseconds: 300),
+        );
+      }
+
+      final insertIndex = _findInsertionIndex(_protectedListData, app);
+      _protectedListData.insert(insertIndex, app);
+      _listKeyProtected.currentState?.insertItem(insertIndex);
+
+      // Force rebuild to update headers/counts if needed,
+      // but rely on AnimatedList for list updates
+      setState(() {});
+    } else {
+      // Move from Protected -> Unprotected
+      final removeIndex = _protectedListData.indexOf(app);
+      if (removeIndex != -1) {
+        _protectedListData.removeAt(removeIndex);
+        _listKeyProtected.currentState?.removeItem(
+          removeIndex,
+          (context, animation) => _buildRemovedItem(app, animation, true),
+          duration: const Duration(milliseconds: 300),
+        );
+      }
+
+      final insertIndex = _findInsertionIndex(_unprotectedListData, app);
+      _unprotectedListData.insert(insertIndex, app);
+      _listKeyUnprotected.currentState?.insertItem(insertIndex);
+
+      setState(() {});
+    }
+  }
+
+  int _findInsertionIndex(List<AppInfo> list, AppInfo item) {
+    final name = item.appName.toLowerCase();
+    for (int i = 0; i < list.length; i++) {
+      if (list[i].appName.toLowerCase().compareTo(name) > 0) {
+        return i;
+      }
+    }
+    return list.length;
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final protectedApps = _protectedList;
-    final unprotectedApps = _unprotectedList;
+    final bool isSearching = _query.trim().isNotEmpty;
+    // When searching, use filtered list. When not, use the split lists.
+    // Note: _protectedList and _unprotectedList are computed getters based on _filteredApps.
+    // If we are NOT searching, we ignore them and use _protectedListData / _unprotectedListData.
+
+    final protectedApps = isSearching ? _protectedList : _protectedListData;
+    final unprotectedApps = isSearching
+        ? _unprotectedList
+        : _unprotectedListData;
     final totalApps = _apps.length;
     final protectedCount = _protected.length;
 
@@ -160,10 +249,28 @@ class _ProtectedAppsScreenState extends State<ProtectedAppsScreen> {
                     if (!_loading) ...[
                       if (protectedApps.isNotEmpty)
                         _buildSectionHeader(context, 'Protected Apps'),
-                      _buildAppList(protectedApps, true),
+
+                      if (isSearching)
+                        _buildAppList(protectedApps, true)
+                      else
+                        _buildAnimatedAppList(
+                          protectedApps,
+                          true,
+                          _listKeyProtected,
+                        ),
+
                       if (unprotectedApps.isNotEmpty)
-                        _buildSectionHeader(context, 'Other Apps'),
-                      _buildAppList(unprotectedApps, false),
+                        _buildSectionHeader(context, 'Your Apps'),
+
+                      if (isSearching)
+                        _buildAppList(unprotectedApps, false)
+                      else
+                        _buildAnimatedAppList(
+                          unprotectedApps,
+                          false,
+                          _listKeyUnprotected,
+                        ),
+
                       const SliverToBoxAdapter(child: SizedBox(height: 40)),
                     ],
                   ],
@@ -295,13 +402,70 @@ class _ProtectedAppsScreenState extends State<ProtectedAppsScreen> {
                     app: app,
                     isChecked: isProtected,
                     query: _query,
-                    onToggle: (val) => _toggle(app.packageName, val),
+                    onToggle: (val) => _toggle(app, val),
                   ),
                 ),
               ),
             ),
           );
         }, childCount: apps.length),
+      ),
+    );
+  }
+
+  Widget _buildAnimatedAppList(
+    List<AppInfo> apps,
+    bool isProtected,
+    GlobalKey<SliverAnimatedListState> listKey,
+  ) {
+    return SliverAnimatedList(
+      key: listKey,
+      initialItemCount: apps.length,
+      itemBuilder: (context, index, animation) {
+        // Safety check for index out of range during rapid animations
+        if (index >= apps.length) return const SizedBox();
+        final app = apps[index];
+
+        return FadeTransition(
+          opacity: animation,
+          child: SizeTransition(
+            sizeFactor: animation,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+              child: AppListItem(
+                app: app,
+                isChecked: isProtected,
+                query: _query,
+                onToggle: (val) => _toggle(app, val),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildRemovedItem(
+    AppInfo app,
+    Animation<double> animation,
+    bool wasProtected,
+  ) {
+    return FadeTransition(
+      opacity: animation,
+      child: SizeTransition(
+        sizeFactor: animation,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+          child: AppListItem(
+            app: app,
+            // Visual trick: show the state it is MOVING TO, or the state it WAS?
+            // If I uncheck (wasProtected=true), it becomes unchecked.
+            // If I check (wasProtected=false), it becomes checked.
+            isChecked: !wasProtected,
+            query: _query,
+            onToggle: (_) {}, // Disable interactions
+          ),
+        ),
       ),
     );
   }
