@@ -99,54 +99,77 @@ class _ProtectedAppsScreenState extends State<ProtectedAppsScreen> {
   Widget build(BuildContext context) {
     final items = _filtered;
     return Scaffold(
-      appBar: AppBar(title: const Text('Protected Apps')),
-      body: RefreshIndicator(
-        onRefresh: _load,
-        child: ListView.separated(
-          padding: const EdgeInsets.all(12),
-          physics: const AlwaysScrollableScrollPhysics(),
-          itemCount: (_loading ? 1 : items.length + 1),
-          separatorBuilder: (_, __) => const Divider(height: 0),
-          itemBuilder: (context, index) {
-            if (index == 0) {
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  TextField(
-                    controller: _searchCtrl,
-                    decoration: const InputDecoration(
-                      hintText: 'Search apps',
-                      prefixIcon: Icon(Icons.search),
-                      border: OutlineInputBorder(),
-                    ),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFF1E2A78), Color(0xFF0E1838)],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+        ),
+        child: SafeArea(
+          child: RefreshIndicator(
+            onRefresh: _load,
+            child: ListView.separated(
+              padding: const EdgeInsets.all(16),
+              physics: const AlwaysScrollableScrollPhysics(),
+              itemCount: (_loading ? 1 : items.length + 1),
+              separatorBuilder: (_, __) => const SizedBox(height: 8),
+              itemBuilder: (context, index) {
+                if (index == 0) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const Text(
+                        'Protected Apps',
+                        style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w700),
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: _searchCtrl,
+                        style: const TextStyle(color: Colors.white),
+                        decoration: InputDecoration(
+                          hintText: 'Search apps',
+                          hintStyle: const TextStyle(color: Colors.white54),
+                          prefixIcon: const Icon(Icons.search, color: Colors.white70),
+                          filled: true,
+                          fillColor: Colors.white.withOpacity(0.08),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+                        ),
+                      ),
+                      if (_message.isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        Text(_message, style: const TextStyle(color: Colors.orangeAccent)),
+                      ],
+                      const SizedBox(height: 8),
+                      if (_loading) const LinearProgressIndicator(color: Colors.white70),
+                    ],
+                  );
+                }
+                final app = items[index - 1];
+                final checked = _protected.contains(app.packageName);
+                return Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.06),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.white10),
                   ),
-                  if (_message.isNotEmpty) ...[
-                    const SizedBox(height: 8),
-                    Text(
-                      _message,
-                      style: const TextStyle(color: Colors.orange),
+                  child: ListTile(
+                    leading: app.icon != null
+                        ? CircleAvatar(backgroundImage: MemoryImage(app.icon!))
+                        : const CircleAvatar(child: Icon(Icons.apps)),
+                    title: Text(app.appName, style: const TextStyle(color: Colors.white)),
+                    subtitle: Text(app.packageName, style: const TextStyle(color: Colors.white70)),
+                    trailing: Checkbox(
+                      value: checked,
+                      onChanged: (v) => _toggle(app.packageName, v ?? false),
                     ),
-                  ],
-                  const SizedBox(height: 8),
-                  if (_loading) const LinearProgressIndicator(),
-                ],
-              );
-            }
-            final app = items[index - 1];
-            final checked = _protected.contains(app.packageName);
-            return ListTile(
-              leading: app.icon != null
-                  ? CircleAvatar(backgroundImage: MemoryImage(app.icon!))
-                  : const CircleAvatar(child: Icon(Icons.apps)),
-              title: Text(app.appName),
-              subtitle: Text(app.packageName),
-              trailing: Checkbox(
-                value: checked,
-                onChanged: (v) => _toggle(app.packageName, v ?? false),
-              ),
-              onTap: () => _toggle(app.packageName, !checked),
-            );
-          },
+                    onTap: () => _toggle(app.packageName, !checked),
+                  ),
+                );
+              },
+            ),
+          ),
         ),
       ),
     );
