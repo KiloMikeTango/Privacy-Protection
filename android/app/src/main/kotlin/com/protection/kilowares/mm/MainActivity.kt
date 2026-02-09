@@ -13,6 +13,8 @@ import android.util.Base64
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import java.io.ByteArrayOutputStream
+import androidx.security.crypto.EncryptedSharedPreferences
+import androidx.security.crypto.MasterKeys
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -88,12 +90,12 @@ class MainActivity : FlutterActivity() {
                 }
                 "saveProtectedApps" -> {
                     val packages = (call.arguments as? List<*>)?.map { it.toString() } ?: emptyList()
-                    val prefs = getSharedPreferences(prefsName, Context.MODE_PRIVATE)
+                    val prefs = securePrefs()
                     prefs.edit().putStringSet(keyProtected, packages.toSet()).apply()
                     result.success(true)
                 }
                 "getProtectedApps" -> {
-                    val prefs = getSharedPreferences(prefsName, Context.MODE_PRIVATE)
+                    val prefs = securePrefs()
                     val set = prefs.getStringSet(keyProtected, emptySet()) ?: emptySet()
                     result.success(set.toList())
                 }
@@ -110,5 +112,20 @@ class MainActivity : FlutterActivity() {
             packageName
         )
         return mode == AppOpsManager.MODE_ALLOWED
+    }
+
+    private fun securePrefs(): SharedPreferences {
+        return try {
+            val keyAlias = MasterKeys.getOrCreate(MasterKeys.AES256_GCM_SPEC)
+            EncryptedSharedPreferences.create(
+                prefsName,
+                keyAlias,
+                this,
+                EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+            )
+        } catch (_: Throwable) {
+            getSharedPreferences(prefsName, Context.MODE_PRIVATE)
+        }
     }
 }

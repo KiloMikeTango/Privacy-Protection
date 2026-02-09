@@ -1,0 +1,3 @@
+ -keep class io.flutter.** { *; }
+ -keep class com.protection.kilowares.mm.MainActivity { *; }
+ -keep class com.protection.kilowares.mm.OverlayService { *; }
