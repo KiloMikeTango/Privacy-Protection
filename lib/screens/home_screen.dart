@@ -89,9 +89,10 @@ class _HomeScreenState extends State<HomeScreen>
             color: colorScheme.background,
             child: SafeArea(
               child: Padding(
-                padding: const EdgeInsets.all(24),
+                padding: const EdgeInsets.all(30),
                 child: AnimationLimiter(
                   child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: AnimationConfiguration.toStaggeredList(
                       duration: const Duration(milliseconds: 600),
@@ -101,7 +102,7 @@ class _HomeScreenState extends State<HomeScreen>
                       ),
                       children: [
                         Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Text(
                               'Shield',
@@ -109,30 +110,6 @@ class _HomeScreenState extends State<HomeScreen>
                                 fontWeight: FontWeight.bold,
                                 letterSpacing: -0.5,
                                 color: colorScheme.onSurface,
-                              ),
-                            ),
-                            Hero(
-                              tag: 'protected_icon',
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(12),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withOpacity(0.05),
-                                      blurRadius: 10,
-                                      offset: const Offset(0, 4),
-                                    ),
-                                  ],
-                                ),
-                                child: IconButton(
-                                  icon: const Icon(Icons.shield_outlined),
-                                  onPressed: () => Navigator.of(
-                                    context,
-                                  ).pushNamed('/protected'),
-                                  tooltip: 'Protected Apps',
-                                  color: colorScheme.onSurface,
-                                ),
                               ),
                             ),
                           ],
@@ -231,7 +208,7 @@ class _HomeScreenState extends State<HomeScreen>
                                 duration: const Duration(milliseconds: 300),
                                 child: Text(
                                   _running
-                                      ? 'System Protected'
+                                      ? 'Protection On'
                                       : 'Protection Off',
                                   key: ValueKey(_running),
                                   style: theme.textTheme.titleLarge?.copyWith(

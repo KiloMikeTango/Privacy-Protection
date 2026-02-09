@@ -224,20 +224,23 @@ class _ProtectedAppsScreenState extends State<ProtectedAppsScreen> {
                   physics: const AlwaysScrollableScrollPhysics(),
                   slivers: [
                     SliverPadding(
-                      padding: const EdgeInsets.all(20),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
                       sliver: SliverList(
                         delegate: SliverChildListDelegate([
                           _buildSearchField(theme),
-                          const SizedBox(height: 16),
+                          const SizedBox(height: 12),
                           _buildStatsRow(theme, totalApps, protectedCount),
                           if (_message.isNotEmpty) ...[
-                            const SizedBox(height: 12),
+                            const SizedBox(height: 8),
                             Text(
                               _message,
                               style: TextStyle(color: colorScheme.error),
                             ),
                           ],
-                          const SizedBox(height: 20),
+                          const SizedBox(height: 12),
                           if (_loading)
                             LinearProgressIndicator(
                               backgroundColor: Colors.transparent,
@@ -368,7 +371,7 @@ class _ProtectedAppsScreenState extends State<ProtectedAppsScreen> {
   Widget _buildSectionHeader(BuildContext context, String title) {
     return SliverToBoxAdapter(
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
         child: Text(
           title.toUpperCase(),
           style: TextStyle(
@@ -395,8 +398,8 @@ class _ProtectedAppsScreenState extends State<ProtectedAppsScreen> {
               child: FadeInAnimation(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: 6,
+                    horizontal: 16,
+                    vertical: 4,
                   ),
                   child: AppListItem(
                     app: app,
@@ -431,7 +434,7 @@ class _ProtectedAppsScreenState extends State<ProtectedAppsScreen> {
           child: SizeTransition(
             sizeFactor: animation,
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
               child: AppListItem(
                 app: app,
                 isChecked: isProtected,
@@ -455,7 +458,7 @@ class _ProtectedAppsScreenState extends State<ProtectedAppsScreen> {
       child: SizeTransition(
         sizeFactor: animation,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
           child: AppListItem(
             app: app,
             // Visual trick: show the state it is MOVING TO, or the state it WAS?
@@ -506,7 +509,7 @@ class AppListItem extends StatelessWidget {
             : null,
       ),
       child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
         leading: Container(
           width: 48,
           height: 48,
@@ -534,15 +537,23 @@ class AppListItem extends StatelessWidget {
             color: colorScheme.secondary,
           ),
         ),
-        trailing: Checkbox(
-          value: isChecked,
-          onChanged: (v) => onToggle(v ?? false),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-          activeColor: colorScheme.primary,
-          checkColor: Colors.white,
-          side: BorderSide(
-            color: colorScheme.secondary.withOpacity(0.5),
-            width: 2,
+        trailing: InkWell(
+          onTap: () => onToggle(!isChecked),
+          borderRadius: BorderRadius.circular(20),
+          child: Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: isChecked
+                  ? colorScheme.error.withOpacity(0.1)
+                  : colorScheme.primary.withOpacity(0.1),
+            ),
+            child: Icon(
+              isChecked ? Icons.remove_rounded : Icons.add_rounded,
+              color: isChecked ? colorScheme.error : colorScheme.primary,
+              size: 20,
+            ),
           ),
         ),
         onTap: () => onToggle(!isChecked),
