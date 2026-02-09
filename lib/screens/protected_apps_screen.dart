@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 
 class ProtectedAppsScreen extends StatefulWidget {
   const ProtectedAppsScreen({super.key});
@@ -275,19 +276,33 @@ class _ProtectedAppsScreenState extends State<ProtectedAppsScreen> {
   }
 
   Widget _buildAppList(List<AppInfo> apps, bool isProtected) {
-    return SliverList(
-      delegate: SliverChildBuilderDelegate((context, index) {
-        final app = apps[index];
-        return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
-          child: AppListItem(
-            app: app,
-            isChecked: isProtected,
-            query: _query,
-            onToggle: (val) => _toggle(app.packageName, val),
-          ),
-        );
-      }, childCount: apps.length),
+    return AnimationLimiter(
+      child: SliverList(
+        delegate: SliverChildBuilderDelegate((context, index) {
+          final app = apps[index];
+          return AnimationConfiguration.staggeredList(
+            position: index,
+            duration: const Duration(milliseconds: 375),
+            child: SlideAnimation(
+              verticalOffset: 50.0,
+              child: FadeInAnimation(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 6,
+                  ),
+                  child: AppListItem(
+                    app: app,
+                    isChecked: isProtected,
+                    query: _query,
+                    onToggle: (val) => _toggle(app.packageName, val),
+                  ),
+                ),
+              ),
+            ),
+          );
+        }, childCount: apps.length),
+      ),
     );
   }
 }

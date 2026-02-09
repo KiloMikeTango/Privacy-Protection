@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -11,6 +12,8 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen>
     with SingleTickerProviderStateMixin {
   static const MethodChannel _channel = MethodChannel('privacy_protection');
+  late AnimationController _pulseController;
+  late Animation<double> _pulseAnimation;
   bool _running = false;
   bool _busy = false;
   String _message = '';
@@ -18,7 +21,20 @@ class _HomeScreenState extends State<HomeScreen>
   @override
   void initState() {
     super.initState();
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 2),
+    )..repeat(reverse: true);
+    _pulseAnimation = Tween<double>(begin: 1.0, end: 1.1).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    );
     _refresh();
+  }
+
+  @override
+  void dispose() {
+    _pulseController.dispose();
+    super.dispose();
   }
 
   Future<void> _refresh() async {
@@ -74,148 +90,190 @@ class _HomeScreenState extends State<HomeScreen>
             child: SafeArea(
               child: Padding(
                 padding: const EdgeInsets.all(24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                child: AnimationLimiter(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: AnimationConfiguration.toStaggeredList(
+                      duration: const Duration(milliseconds: 600),
+                      childAnimationBuilder: (widget) => SlideAnimation(
+                        verticalOffset: 50.0,
+                        child: FadeInAnimation(child: widget),
+                      ),
                       children: [
-                        Text(
-                          'Shield',
-                          style: theme.textTheme.headlineMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: -0.5,
-                            color: colorScheme.onSurface,
-                          ),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'Shield',
+                              style: theme.textTheme.headlineMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: -0.5,
+                                color: colorScheme.onSurface,
+                              ),
+                            ),
+                            Hero(
+                              tag: 'protected_icon',
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(12),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.05),
+                                      blurRadius: 10,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ],
+                                ),
+                                child: IconButton(
+                                  icon: const Icon(Icons.shield_outlined),
+                                  onPressed: () => Navigator.of(
+                                    context,
+                                  ).pushNamed('/protected'),
+                                  tooltip: 'Protected Apps',
+                                  color: colorScheme.onSurface,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
-                        Container(
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(12),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.05),
-                                blurRadius: 10,
-                                offset: const Offset(0, 4),
+                        SizedBox(height: size.height * 0.05),
+                        Center(
+                          child: Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              // Soft Outer Ring
+                              AnimatedBuilder(
+                                animation: _pulseAnimation,
+                                builder: (context, child) {
+                                  return Transform.scale(
+                                    scale: _running
+                                        ? _pulseAnimation.value
+                                        : 1.0,
+                                    child: AnimatedContainer(
+                                      duration: const Duration(
+                                        milliseconds: 500,
+                                      ),
+                                      width: ring,
+                                      height: ring,
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        color: _running
+                                            ? colorScheme.primary.withOpacity(
+                                                0.1,
+                                              )
+                                            : Colors.white,
+                                        boxShadow: [
+                                          if (_running)
+                                            BoxShadow(
+                                              color: colorScheme.primary
+                                                  .withOpacity(0.2),
+                                              blurRadius: 40,
+                                              spreadRadius: 10,
+                                            )
+                                          else
+                                            BoxShadow(
+                                              color: Colors.black.withOpacity(
+                                                0.03,
+                                              ),
+                                              blurRadius: 20,
+                                              spreadRadius: 5,
+                                            ),
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                              // Button
+                              GestureDetector(
+                                onTap: _busy ? null : _toggle,
+                                child: AnimatedContainer(
+                                  duration: const Duration(milliseconds: 300),
+                                  width: circle,
+                                  height: circle,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: _running
+                                        ? colorScheme.primary
+                                        : Colors.white,
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: _running
+                                            ? colorScheme.primary.withOpacity(
+                                                0.4,
+                                              )
+                                            : Colors.black.withOpacity(0.1),
+                                        blurRadius: 30,
+                                        offset: const Offset(0, 15),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Center(
+                                    child: Icon(
+                                      Icons.power_settings_new_rounded,
+                                      color: _running
+                                          ? Colors.white
+                                          : colorScheme.secondary,
+                                      size: circle * 0.4,
+                                    ),
+                                  ),
+                                ),
                               ),
                             ],
                           ),
-                          child: IconButton(
-                            icon: const Icon(Icons.shield_outlined),
-                            onPressed: () =>
-                                Navigator.of(context).pushNamed('/protected'),
-                            tooltip: 'Protected Apps',
-                            color: colorScheme.onSurface,
+                        ),
+                        SizedBox(height: size.height * 0.05),
+                        Center(
+                          child: Column(
+                            children: [
+                              AnimatedSwitcher(
+                                duration: const Duration(milliseconds: 300),
+                                child: Text(
+                                  _running
+                                      ? 'System Protected'
+                                      : 'Protection Off',
+                                  key: ValueKey(_running),
+                                  style: theme.textTheme.titleLarge?.copyWith(
+                                    color: _running
+                                        ? colorScheme.primary
+                                        : colorScheme.secondary,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                              if (_message.isNotEmpty) ...[
+                                const SizedBox(height: 12),
+                                Text(
+                                  _message,
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    color: colorScheme.error,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 32),
+                        Hero(
+                          tag: 'nav_card',
+                          child: Material(
+                            type: MaterialType.transparency,
+                            child: _buildNavCard(
+                              context,
+                              title: 'Protected Apps',
+                              subtitle: 'Manage overlay permissions',
+                              icon: Icons.apps_rounded,
+                              onTap: () =>
+                                  Navigator.of(context).pushNamed('/protected'),
+                            ),
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 20),
-                    Expanded(
-                      child: Center(
-                        child: Stack(
-                          alignment: Alignment.center,
-                          children: [
-                            // Soft Outer Ring
-                            AnimatedContainer(
-                              duration: const Duration(milliseconds: 500),
-                              width: ring,
-                              height: ring,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: _running
-                                    ? colorScheme.primary.withOpacity(0.1)
-                                    : Colors.white,
-                                boxShadow: [
-                                  if (_running)
-                                    BoxShadow(
-                                      color: colorScheme.primary.withOpacity(0.2),
-                                      blurRadius: 40,
-                                      spreadRadius: 10,
-                                    )
-                                  else
-                                    BoxShadow(
-                                      color: Colors.black.withOpacity(0.03),
-                                      blurRadius: 20,
-                                      spreadRadius: 5,
-                                    ),
-                                ],
-                              ),
-                            ),
-                            // Button
-                            GestureDetector(
-                              onTap: _busy ? null : _toggle,
-                              child: AnimatedContainer(
-                                duration: const Duration(milliseconds: 300),
-                                width: circle,
-                                height: circle,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: _running
-                                      ? colorScheme.primary
-                                      : Colors.white,
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: _running
-                                          ? colorScheme.primary.withOpacity(0.4)
-                                          : Colors.black.withOpacity(0.1),
-                                      blurRadius: 30,
-                                      offset: const Offset(0, 15),
-                                    ),
-                                  ],
-                                ),
-                                child: Center(
-                                  child: Icon(
-                                    Icons.power_settings_new_rounded,
-                                    color: _running
-                                        ? Colors.white
-                                        : colorScheme.secondary,
-                                    size: circle * 0.4,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    Center(
-                      child: Column(
-                        children: [
-                          Text(
-                            _running ? 'System Protected' : 'Protection Off',
-                            style: theme.textTheme.titleLarge?.copyWith(
-                              color: _running
-                                  ? colorScheme.primary
-                                  : colorScheme.secondary,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          if (_message.isNotEmpty) ...[
-                            const SizedBox(height: 12),
-                            Text(
-                              _message,
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                color: colorScheme.error,
-                                fontSize: 13,
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 32),
-                    _buildNavCard(
-                      context,
-                      title: 'Protected Apps',
-                      subtitle: 'Manage overlay permissions',
-                      icon: Icons.apps_rounded,
-                      onTap: () =>
-                          Navigator.of(context).pushNamed('/protected'),
-                    ),
-                  ],
+                  ),
                 ),
               ),
             ),
