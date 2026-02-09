@@ -25,46 +25,50 @@ class PrivacyProtectionApp extends StatelessWidget {
   }
 
   ThemeData _buildTheme() {
+    // Modern Clean Aesthetic (2026)
+    // Soft gradients, off-white/grey palette, Inter font, elegant shadows.
     final base = ThemeData(
-      brightness: Brightness.dark,
+      brightness: Brightness.light,
       useMaterial3: true,
-      scaffoldBackgroundColor: const Color(0xFF0B1121), // Deep Tech Navy
-      colorScheme: const ColorScheme.dark(
-        primary: Color(0xFF00F0FF), // Cyber Cyan
-        secondary: Color(0xFF7000FF), // Electric Violet
-        surface: Color(0xFF151E32), // Lighter Navy
-        background: Color(0xFF0B1121),
-        error: Color(0xFFFF2A6D), // Neon Red
-        onPrimary: Colors.black,
-        onSurface: Colors.white,
+      scaffoldBackgroundColor: const Color(0xFFF5F7FA), // Soft cloud grey
+      colorScheme: const ColorScheme.light(
+        primary: Color(0xFF2563EB), // Royal Blue
+        secondary: Color(0xFF64748B), // Slate Grey
+        surface: Colors.white,
+        background: Color(0xFFF5F7FA),
+        error: Color(0xFFEF4444),
+        onPrimary: Colors.white,
+        onSurface: Color(0xFF1E293B), // Dark Slate
       ),
     );
 
     return base.copyWith(
-      textTheme: GoogleFonts.outfitTextTheme(
-        base.textTheme,
-      ).apply(bodyColor: Colors.white, displayColor: Colors.white),
+      textTheme: GoogleFonts.interTextTheme(base.textTheme).apply(
+        bodyColor: const Color(0xFF1E293B),
+        displayColor: const Color(0xFF1E293B),
+      ),
       appBarTheme: AppBarTheme(
         backgroundColor: Colors.transparent,
         elevation: 0,
         centerTitle: true,
-        titleTextStyle: GoogleFonts.outfit(
-          fontSize: 22,
+        titleTextStyle: GoogleFonts.inter(
+          fontSize: 20,
           fontWeight: FontWeight.w600,
-          letterSpacing: 0.5,
-          color: Colors.white,
+          color: const Color(0xFF1E293B),
+          letterSpacing: -0.5,
         ),
-        iconTheme: const IconThemeData(color: Colors.white),
+        iconTheme: const IconThemeData(color: Color(0xFF1E293B)),
       ),
       cardTheme: CardThemeData(
-        color: const Color(0xFF1E293B).withOpacity(0.5),
-        elevation: 0,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        color: Colors.white,
+        elevation: 4,
+        shadowColor: Colors.black.withOpacity(0.05),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         margin: EdgeInsets.zero,
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: const Color(0xFF1E293B),
+        fillColor: Colors.white,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
           borderSide: BorderSide.none,
@@ -75,25 +79,28 @@ class PrivacyProtectionApp extends StatelessWidget {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: Color(0xFF00F0FF), width: 1.5),
+          borderSide: const BorderSide(color: Color(0xFF2563EB), width: 1.5),
         ),
-        hintStyle: TextStyle(color: Colors.white.withOpacity(0.4)),
-        prefixIconColor: Colors.white.withOpacity(0.6),
+        hintStyle: TextStyle(color: const Color(0xFF94A3B8)),
+        prefixIconColor: const Color(0xFF94A3B8),
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 20,
           vertical: 16,
         ),
       ),
       checkboxTheme: CheckboxThemeData(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+        side: const BorderSide(color: Color(0xFFCBD5E1), width: 2),
         fillColor: MaterialStateProperty.resolveWith((states) {
           if (states.contains(MaterialState.selected)) {
-            return const Color(0xFF00F0FF);
+            return const Color(0xFF2563EB);
           }
           return Colors.transparent;
         }),
-        checkColor: MaterialStateProperty.all(Colors.black),
-        side: const BorderSide(color: Colors.white54, width: 2),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(5)),
+      ),
+      dividerTheme: DividerThemeData(
+        color: const Color(0xFFE2E8F0),
+        thickness: 1,
       ),
     );
   }

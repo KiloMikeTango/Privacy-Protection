@@ -66,16 +66,11 @@ class _HomeScreenState extends State<HomeScreen>
           final size = constraints.biggest;
           final circle = size.shortestSide * 0.45;
           final ring = circle + 40;
-          final colorScheme = Theme.of(context).colorScheme;
+          final theme = Theme.of(context);
+          final colorScheme = theme.colorScheme;
 
           return Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [colorScheme.background, colorScheme.surface],
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-              ),
-            ),
+            color: colorScheme.background,
             child: SafeArea(
               child: Padding(
                 padding: const EdgeInsets.all(24),
@@ -87,22 +82,30 @@ class _HomeScreenState extends State<HomeScreen>
                       children: [
                         Text(
                           'Shield',
-                          style: Theme.of(context).textTheme.headlineMedium
-                              ?.copyWith(
-                                fontWeight: FontWeight.bold,
-                                letterSpacing: 1,
-                              ),
+                          style: theme.textTheme.headlineMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: -0.5,
+                            color: colorScheme.onSurface,
+                          ),
                         ),
                         Container(
                           decoration: BoxDecoration(
-                            color: colorScheme.surface.withOpacity(0.5),
+                            color: Colors.white,
                             borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.05),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
                           ),
                           child: IconButton(
                             icon: const Icon(Icons.shield_outlined),
                             onPressed: () =>
                                 Navigator.of(context).pushNamed('/protected'),
                             tooltip: 'Protected Apps',
+                            color: colorScheme.onSurface,
                           ),
                         ),
                       ],
@@ -113,28 +116,30 @@ class _HomeScreenState extends State<HomeScreen>
                         child: Stack(
                           alignment: Alignment.center,
                           children: [
-                            // Outer Glow Ring
+                            // Soft Outer Ring
                             AnimatedContainer(
                               duration: const Duration(milliseconds: 500),
                               width: ring,
                               height: ring,
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
-                                gradient: SweepGradient(
-                                  colors: _running
-                                      ? [
-                                          colorScheme.primary.withOpacity(0.0),
-                                          colorScheme.primary.withOpacity(0.2),
-                                          colorScheme.primary.withOpacity(0.6),
-                                          colorScheme.primary.withOpacity(0.2),
-                                          colorScheme.primary.withOpacity(0.0),
-                                        ]
-                                      : [
-                                          Colors.white.withOpacity(0.02),
-                                          Colors.white.withOpacity(0.05),
-                                          Colors.white.withOpacity(0.02),
-                                        ],
-                                ),
+                                color: _running
+                                    ? colorScheme.primary.withOpacity(0.1)
+                                    : Colors.white,
+                                boxShadow: [
+                                  if (_running)
+                                    BoxShadow(
+                                      color: colorScheme.primary.withOpacity(0.2),
+                                      blurRadius: 40,
+                                      spreadRadius: 10,
+                                    )
+                                  else
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.03),
+                                      blurRadius: 20,
+                                      spreadRadius: 5,
+                                    ),
+                                ],
                               ),
                             ),
                             // Button
@@ -146,56 +151,25 @@ class _HomeScreenState extends State<HomeScreen>
                                 height: circle,
                                 decoration: BoxDecoration(
                                   shape: BoxShape.circle,
-                                  gradient: LinearGradient(
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                    colors: _running
-                                        ? [
-                                            colorScheme.primary,
-                                            Color.lerp(
-                                              colorScheme.primary,
-                                              Colors.black,
-                                              0.2,
-                                            )!,
-                                          ]
-                                        : [
-                                            colorScheme.surface,
-                                            Color.lerp(
-                                              colorScheme.surface,
-                                              Colors.black,
-                                              0.4,
-                                            )!,
-                                          ],
-                                  ),
+                                  color: _running
+                                      ? colorScheme.primary
+                                      : Colors.white,
                                   boxShadow: [
                                     BoxShadow(
                                       color: _running
                                           ? colorScheme.primary.withOpacity(0.4)
-                                          : Colors.black.withOpacity(0.3),
+                                          : Colors.black.withOpacity(0.1),
                                       blurRadius: 30,
-                                      spreadRadius: 2,
-                                      offset: const Offset(0, 10),
+                                      offset: const Offset(0, 15),
                                     ),
-                                    if (_running)
-                                      BoxShadow(
-                                        color: colorScheme.primary.withOpacity(
-                                          0.6,
-                                        ),
-                                        blurRadius: 60,
-                                        spreadRadius: -10,
-                                      ),
                                   ],
-                                  border: Border.all(
-                                    color: _running
-                                        ? Colors.white.withOpacity(0.3)
-                                        : Colors.white.withOpacity(0.05),
-                                    width: 1,
-                                  ),
                                 ),
                                 child: Center(
                                   child: Icon(
                                     Icons.power_settings_new_rounded,
-                                    color: Colors.white,
+                                    color: _running
+                                        ? Colors.white
+                                        : colorScheme.secondary,
                                     size: circle * 0.4,
                                   ),
                                 ),
@@ -210,15 +184,13 @@ class _HomeScreenState extends State<HomeScreen>
                       child: Column(
                         children: [
                           Text(
-                            _running ? 'SYSTEM PROTECTED' : 'PROTECTION OFF',
-                            style: Theme.of(context).textTheme.titleMedium
-                                ?.copyWith(
-                                  color: _running
-                                      ? colorScheme.primary
-                                      : Colors.white54,
-                                  fontWeight: FontWeight.bold,
-                                  letterSpacing: 2,
-                                ),
+                            _running ? 'System Protected' : 'Protection Off',
+                            style: theme.textTheme.titleLarge?.copyWith(
+                              color: _running
+                                  ? colorScheme.primary
+                                  : colorScheme.secondary,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                           if (_message.isNotEmpty) ...[
                             const SizedBox(height: 12),
@@ -260,7 +232,14 @@ class _HomeScreenState extends State<HomeScreen>
     required IconData icon,
     required VoidCallback onTap,
   }) {
+    final theme = Theme.of(context);
     return Card(
+      elevation: 0,
+      color: Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: BorderSide(color: Colors.grey.withOpacity(0.1)),
+      ),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(20),
@@ -271,10 +250,10 @@ class _HomeScreenState extends State<HomeScreen>
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                  color: theme.colorScheme.primary.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(icon, color: Theme.of(context).colorScheme.primary),
+                child: Icon(icon, color: theme.colorScheme.primary),
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -283,18 +262,16 @@ class _HomeScreenState extends State<HomeScreen>
                   children: [
                     Text(
                       title,
-                      style: const TextStyle(
-                        color: Colors.white,
+                      style: theme.textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w600,
-                        fontSize: 16,
+                        color: theme.colorScheme.onSurface,
                       ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       subtitle,
-                      style: TextStyle(
-                        color: Colors.white.withOpacity(0.5),
-                        fontSize: 13,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.secondary,
                       ),
                     ),
                   ],
@@ -302,7 +279,7 @@ class _HomeScreenState extends State<HomeScreen>
               ),
               Icon(
                 Icons.chevron_right_rounded,
-                color: Colors.white.withOpacity(0.3),
+                color: theme.colorScheme.secondary.withOpacity(0.5),
               ),
             ],
           ),

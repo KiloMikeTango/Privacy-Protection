@@ -112,75 +112,64 @@ class _ProtectedAppsScreenState extends State<ProtectedAppsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
     final protectedApps = _protectedList;
     final unprotectedApps = _unprotectedList;
     final totalApps = _apps.length;
     final protectedCount = _protected.length;
 
     return Scaffold(
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [colorScheme.background, colorScheme.surface],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
-        ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              _buildAppBar(context),
-              Expanded(
-                child: RefreshIndicator(
-                  color: colorScheme.primary,
-                  backgroundColor: colorScheme.surface,
-                  onRefresh: _load,
-                  child: CustomScrollView(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    slivers: [
-                      SliverPadding(
-                        padding: const EdgeInsets.all(20),
-                        sliver: SliverList(
-                          delegate: SliverChildListDelegate([
-                            _buildSearchField(colorScheme),
-                            const SizedBox(height: 16),
-                            _buildStatsRow(
-                              colorScheme,
-                              totalApps,
-                              protectedCount,
+      backgroundColor: colorScheme.background,
+      body: SafeArea(
+        child: Column(
+          children: [
+            _buildAppBar(context),
+            Expanded(
+              child: RefreshIndicator(
+                color: colorScheme.primary,
+                backgroundColor: Colors.white,
+                onRefresh: _load,
+                child: CustomScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  slivers: [
+                    SliverPadding(
+                      padding: const EdgeInsets.all(20),
+                      sliver: SliverList(
+                        delegate: SliverChildListDelegate([
+                          _buildSearchField(theme),
+                          const SizedBox(height: 16),
+                          _buildStatsRow(theme, totalApps, protectedCount),
+                          if (_message.isNotEmpty) ...[
+                            const SizedBox(height: 12),
+                            Text(
+                              _message,
+                              style: TextStyle(color: colorScheme.error),
                             ),
-                            if (_message.isNotEmpty) ...[
-                              const SizedBox(height: 12),
-                              Text(
-                                _message,
-                                style: TextStyle(color: colorScheme.error),
-                              ),
-                            ],
-                            const SizedBox(height: 20),
-                            if (_loading)
-                              LinearProgressIndicator(
-                                backgroundColor: Colors.transparent,
-                                color: colorScheme.primary,
-                              ),
-                          ]),
-                        ),
+                          ],
+                          const SizedBox(height: 20),
+                          if (_loading)
+                            LinearProgressIndicator(
+                              backgroundColor: Colors.transparent,
+                              color: colorScheme.primary,
+                            ),
+                        ]),
                       ),
-                      if (!_loading) ...[
-                        if (protectedApps.isNotEmpty)
-                          _buildSectionHeader(context, 'Protected Apps'),
-                        _buildAppList(protectedApps, true),
-                        if (unprotectedApps.isNotEmpty)
-                          _buildSectionHeader(context, 'Other Apps'),
-                        _buildAppList(unprotectedApps, false),
-                        const SliverToBoxAdapter(child: SizedBox(height: 40)),
-                      ],
+                    ),
+                    if (!_loading) ...[
+                      if (protectedApps.isNotEmpty)
+                        _buildSectionHeader(context, 'Protected Apps'),
+                      _buildAppList(protectedApps, true),
+                      if (unprotectedApps.isNotEmpty)
+                        _buildSectionHeader(context, 'Other Apps'),
+                      _buildAppList(unprotectedApps, false),
+                      const SliverToBoxAdapter(child: SizedBox(height: 40)),
                     ],
-                  ),
+                  ],
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -194,14 +183,14 @@ class _ProtectedAppsScreenState extends State<ProtectedAppsScreen> {
           IconButton(
             icon: const Icon(Icons.arrow_back_ios_new_rounded),
             onPressed: () => Navigator.of(context).pop(),
-            color: Colors.white,
+            color: Theme.of(context).colorScheme.onSurface,
           ),
           const SizedBox(width: 8),
           Text(
             'Protected Apps',
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
               fontWeight: FontWeight.bold,
-              color: Colors.white,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
         ],
@@ -209,39 +198,56 @@ class _ProtectedAppsScreenState extends State<ProtectedAppsScreen> {
     );
   }
 
-  Widget _buildSearchField(ColorScheme colorScheme) {
+  Widget _buildSearchField(ThemeData theme) {
     return TextField(
       controller: _searchCtrl,
-      style: const TextStyle(color: Colors.white),
-      decoration: const InputDecoration(
+      style: TextStyle(color: theme.colorScheme.onSurface),
+      decoration: InputDecoration(
         hintText: 'Search apps...',
-        prefixIcon: Icon(Icons.search_rounded),
+        hintStyle: TextStyle(color: theme.colorScheme.secondary),
+        prefixIcon: Icon(
+          Icons.search_rounded,
+          color: theme.colorScheme.secondary,
+        ),
+        fillColor: Colors.white,
+        filled: true,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide.none,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide.none,
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: theme.colorScheme.primary, width: 1.5),
+        ),
       ),
     );
   }
 
-  Widget _buildStatsRow(ColorScheme colorScheme, int total, int protected) {
+  Widget _buildStatsRow(ThemeData theme, int total, int protected) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
           'Total Apps: $total',
-          style: TextStyle(
-            color: Colors.white.withOpacity(0.5),
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: theme.colorScheme.secondary,
             fontWeight: FontWeight.w500,
           ),
         ),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           decoration: BoxDecoration(
-            color: colorScheme.primary.withOpacity(0.1),
+            color: theme.colorScheme.primary.withOpacity(0.1),
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: colorScheme.primary.withOpacity(0.3)),
           ),
           child: Text(
             'Protected: $protected',
             style: TextStyle(
-              color: colorScheme.primary,
+              color: theme.colorScheme.primary,
               fontWeight: FontWeight.bold,
               fontSize: 12,
             ),
@@ -254,14 +260,14 @@ class _ProtectedAppsScreenState extends State<ProtectedAppsScreen> {
   Widget _buildSectionHeader(BuildContext context, String title) {
     return SliverToBoxAdapter(
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
         child: Text(
           title.toUpperCase(),
           style: TextStyle(
             color: Theme.of(context).colorScheme.secondary,
             fontWeight: FontWeight.bold,
             letterSpacing: 1.2,
-            fontSize: 13,
+            fontSize: 12,
           ),
         ),
       ),
@@ -302,20 +308,23 @@ class AppListItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 200),
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return Container(
       decoration: BoxDecoration(
-        color: isChecked
-            ? colorScheme.primary.withOpacity(0.1)
-            : colorScheme.surface.withOpacity(0.5),
+        color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: isChecked
-              ? colorScheme.primary.withOpacity(0.5)
-              : Colors.transparent,
-          width: 1,
-        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+        border: isChecked
+            ? Border.all(color: colorScheme.primary.withOpacity(0.3), width: 1)
+            : null,
       ),
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -323,40 +332,38 @@ class AppListItem extends StatelessWidget {
           width: 48,
           height: 48,
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.05),
+            color: colorScheme.background,
             borderRadius: BorderRadius.circular(12),
           ),
           padding: const EdgeInsets.all(8),
           child: app.icon != null
               ? Image.memory(app.icon!, fit: BoxFit.contain)
-              : Icon(
-                  Icons.android_rounded,
-                  color: Colors.white.withOpacity(0.5),
-                ),
+              : Icon(Icons.android_rounded, color: colorScheme.secondary),
         ),
         title: _buildHighlightText(
           app.appName,
           query.trim(),
-          const TextStyle(
+          theme.textTheme.titleMedium!.copyWith(
             fontWeight: FontWeight.w600,
-            color: Colors.white,
-            fontSize: 16,
+            color: colorScheme.onSurface,
           ),
+          colorScheme.primary,
         ),
         subtitle: Text(
           app.packageName,
-          style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 12),
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: colorScheme.secondary,
+          ),
         ),
-        trailing: Transform.scale(
-          scale: 1.1,
-          child: Checkbox(
-            value: isChecked,
-            onChanged: (v) => onToggle(v ?? false),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(6),
-            ),
-            activeColor: colorScheme.primary,
-            checkColor: Colors.black,
+        trailing: Checkbox(
+          value: isChecked,
+          onChanged: (v) => onToggle(v ?? false),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+          activeColor: colorScheme.primary,
+          checkColor: Colors.white,
+          side: BorderSide(
+            color: colorScheme.secondary.withOpacity(0.5),
+            width: 2,
           ),
         ),
         onTap: () => onToggle(!isChecked),
@@ -364,7 +371,12 @@ class AppListItem extends StatelessWidget {
     );
   }
 
-  Widget _buildHighlightText(String text, String query, TextStyle baseStyle) {
+  Widget _buildHighlightText(
+    String text,
+    String query,
+    TextStyle baseStyle,
+    Color highlightColor,
+  ) {
     if (query.isEmpty) return Text(text, style: baseStyle);
 
     final lowerText = text.toLowerCase();
@@ -385,9 +397,8 @@ class AppListItem extends StatelessWidget {
         TextSpan(
           text: text.substring(index, index + query.length),
           style: baseStyle.copyWith(
-            backgroundColor: const Color(0xFF00F0FF).withOpacity(0.3),
-            color: Colors.white,
-            fontWeight: FontWeight.w900,
+            color: highlightColor,
+            fontWeight: FontWeight.bold,
           ),
         ),
       );
