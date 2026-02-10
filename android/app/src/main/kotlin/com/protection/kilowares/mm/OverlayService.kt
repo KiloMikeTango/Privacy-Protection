@@ -41,6 +41,7 @@ class OverlayService : Service() {
     private var lastTopPackage: String? = null
     private var protectedPackages: Set<String> = emptySet()
     private lateinit var prefs: SharedPreferences
+    private val prefsName = "privacy_protection_prefs"
     private val keyProtected = "protected_packages"
 
     override fun onCreate() {
@@ -49,10 +50,25 @@ class OverlayService : Service() {
         startForeground(NOTIFICATION_ID, buildNotification())
         wm = getSystemService(Context.WINDOW_SERVICE) as WindowManager
         isServiceActive = true
-        prefs = getSharedPreferences("privacy_protection_prefs", Context.MODE_PRIVATE)
+        prefs = securePrefs()
         protectedPackages = prefs.getStringSet(keyProtected, emptySet()) ?: emptySet()
         launcherPackages = queryLauncherPackages()
         startMonitoring()
+    }
+
+    private fun securePrefs(): SharedPreferences {
+        return try {
+            val keyAlias = MasterKeys.getOrCreate(MasterKeys.AES256_GCM_SPEC)
+            EncryptedSharedPreferences.create(
+                prefsName,
+                keyAlias,
+                this,
+                EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+            )
+        } catch (_: Throwable) {
+            getSharedPreferences(prefsName, Context.MODE_PRIVATE)
+        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -155,7 +171,7 @@ class OverlayService : Service() {
         params.gravity = Gravity.TOP or Gravity.START
 
         val view = FrameLayout(this).apply {
-            setBackgroundColor(Color.parseColor("#88000000"))
+            setBackgroundColor(Color.parseColor("#FFFFFF"))
         }
 
         overlayView = view

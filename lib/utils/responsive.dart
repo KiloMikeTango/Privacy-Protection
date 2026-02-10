@@ -9,7 +9,7 @@ class Responsive {
   static bool _isInitialized = false;
 
   static void init(BuildContext context) {
-    if (_isInitialized) return;
+    // Always update to handle rotation/resize
     final mediaQuery = MediaQuery.of(context);
     _screenWidth = mediaQuery.size.width;
     _screenHeight = mediaQuery.size.height;

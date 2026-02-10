@@ -157,8 +157,8 @@ class _HomeScreenState extends State<HomeScreen> {
                               child: Material(
                                 type: MaterialType.transparency,
                                 child: NavCard(
-                                  title: 'Protected Apps',
-                                  subtitle: 'Manage overlay permissions',
+                                  title: 'Your Apps',
+                                  subtitle: 'Manage your apps',
                                   icon: Icons.apps_rounded,
                                   onTap: () => Navigator.of(
                                     context,
