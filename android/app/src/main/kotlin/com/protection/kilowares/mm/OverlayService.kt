@@ -43,6 +43,21 @@ class OverlayService : Service() {
     private lateinit var prefs: SharedPreferences
     private val prefsName = "privacy_protection_prefs"
     private val keyProtected = "protected_packages"
+    
+    private val screenReceiver = object : android.content.BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            when (intent?.action) {
+                Intent.ACTION_SCREEN_OFF -> stopMonitoring()
+                Intent.ACTION_SCREEN_ON -> startMonitoring()
+            }
+        }
+    }
+
+    private val prefListener = SharedPreferences.OnSharedPreferenceChangeListener { sharedPreferences, key ->
+        if (key == keyProtected) {
+            protectedPackages = sharedPreferences.getStringSet(keyProtected, emptySet()) ?: emptySet()
+        }
+    }
 
     override fun onCreate() {
         super.onCreate()
@@ -51,8 +66,16 @@ class OverlayService : Service() {
         wm = getSystemService(Context.WINDOW_SERVICE) as WindowManager
         isServiceActive = true
         prefs = securePrefs()
+        prefs.registerOnSharedPreferenceChangeListener(prefListener)
         protectedPackages = prefs.getStringSet(keyProtected, emptySet()) ?: emptySet()
         launcherPackages = queryLauncherPackages()
+        
+        val filter = android.content.IntentFilter().apply {
+            addAction(Intent.ACTION_SCREEN_OFF)
+            addAction(Intent.ACTION_SCREEN_ON)
+        }
+        registerReceiver(screenReceiver, filter)
+        
         startMonitoring()
     }
 
@@ -80,6 +103,12 @@ class OverlayService : Service() {
         hideOverlay()
         isServiceActive = false
         stopMonitoring()
+        try {
+            unregisterReceiver(screenReceiver)
+        } catch (_: Exception) {}
+        try {
+            prefs.unregisterOnSharedPreferenceChangeListener(prefListener)
+        } catch (_: Exception) {}
         super.onDestroy()
     }
 
@@ -94,7 +123,7 @@ class OverlayService : Service() {
                     lastTopPackage = newTop
                 }
                 val top = lastTopPackage
-                protectedPackages = prefs.getStringSet(keyProtected, emptySet()) ?: emptySet()
+                // Use cached protectedPackages
                 val shouldShow = top != null &&
                         top != packageName &&
                         isClickableApp(top) &&
