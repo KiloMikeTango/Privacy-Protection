@@ -1,4 +1,4 @@
-package com.protection.kilowares.mm
+package com.shield.kilowares
 
 import android.Manifest
 import android.content.SharedPreferences

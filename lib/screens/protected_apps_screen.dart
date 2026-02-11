@@ -78,9 +78,9 @@ class _ProtectedAppsScreenState extends State<ProtectedAppsScreen> {
       _message = '';
     });
     try {
-      final List<dynamic> protected =
+      final List<dynamic> shielded =
           await _channel.invokeMethod<List<dynamic>>('getProtectedApps') ?? [];
-      _protected = protected.map((e) => e.toString()).toSet();
+      _protected = shielded.map((e) => e.toString()).toSet();
 
       final List<dynamic> appsRaw =
           await _channel.invokeMethod<List<dynamic>>(
@@ -306,7 +306,7 @@ class _ProtectedAppsScreenState extends State<ProtectedAppsScreen> {
           ),
           const SizedBox(width: 8),
           Text(
-            'Protected Apps',
+            'Apps',
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
               fontWeight: FontWeight.bold,
               color: Theme.of(context).colorScheme.onSurface,
@@ -347,7 +347,7 @@ class _ProtectedAppsScreenState extends State<ProtectedAppsScreen> {
     );
   }
 
-  Widget _buildStatsRow(ThemeData theme, int total, int protected) {
+  Widget _buildStatsRow(ThemeData theme, int total, int shielded) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -365,7 +365,7 @@ class _ProtectedAppsScreenState extends State<ProtectedAppsScreen> {
             borderRadius: BorderRadius.circular(20),
           ),
           child: Text(
-            'Protected: $protected',
+            'Shielded: $shielded',
             style: TextStyle(
               color: theme.colorScheme.primary,
               fontWeight: FontWeight.bold,

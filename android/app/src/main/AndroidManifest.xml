@@ -6,7 +6,7 @@
     <!-- Usage stats permission; user must grant access in Settings -->
     <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS" />
     <application
-        android:label="Privacy Protection"
+        android:label="Shield"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
         android:allowBackup="false">

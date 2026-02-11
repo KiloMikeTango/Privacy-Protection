@@ -125,8 +125,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                     duration: const Duration(milliseconds: 300),
                                     child: Text(
                                       _running
-                                          ? 'Protection On'
-                                          : 'Protection Off',
+                                          ? 'ON'
+                                          : 'OFF',
                                       key: ValueKey(_running),
                                       style: theme.textTheme.titleLarge
                                           ?.copyWith(
@@ -157,7 +157,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               child: Material(
                                 type: MaterialType.transparency,
                                 child: NavCard(
-                                  title: 'Your Apps',
+                                  title: 'Apps',
                                   subtitle: 'Manage your apps',
                                   icon: Icons.apps_rounded,
                                   onTap: () => Navigator.of(
