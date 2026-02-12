@@ -133,7 +133,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                             color: _running
                                                 ? colorScheme.primary
                                                 : colorScheme.secondary,
-                                            fontWeight: FontWeight.w600,
+                                            fontWeight: FontWeight.w800,
                                           ),
                                     ),
                                   ),
@@ -165,6 +165,13 @@ class _HomeScreenState extends State<HomeScreen> {
                                   ).pushNamed('/protected'),
                                 ),
                               ),
+                            ),
+                            const SizedBox(height: 16),
+                            NavCard(
+                              title: 'Secret Unlock',
+                              subtitle: 'Configure tap pattern',
+                              icon: Icons.security_rounded,
+                              onTap: () => Navigator.of(context).pushNamed('/secret_setup'),
                             ),
                           ],
                         ),

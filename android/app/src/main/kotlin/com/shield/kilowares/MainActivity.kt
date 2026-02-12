@@ -24,6 +24,7 @@ class MainActivity : FlutterActivity() {
     private val channelName = "privacy_protection"
     private val prefsName = "privacy_protection_prefs"
     private val keyProtected = "protected_packages"
+    private val keySecretPattern = "secret_tap_pattern"
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -99,6 +100,19 @@ class MainActivity : FlutterActivity() {
                     val prefs = securePrefs()
                     val set = prefs.getStringSet(keyProtected, emptySet()) ?: emptySet()
                     result.success(set.toList())
+                }
+                "saveSecretPattern" -> {
+                    val pattern = (call.arguments as? List<*>)?.mapNotNull { it.toString().toIntOrNull() } ?: emptyList()
+                    val s = pattern.joinToString(",")
+                    val prefs = securePrefs()
+                    prefs.edit().putString(keySecretPattern, s).apply()
+                    result.success(true)
+                }
+                "getSecretPattern" -> {
+                    val prefs = securePrefs()
+                    val s = prefs.getString(keySecretPattern, "") ?: ""
+                    val list = if (s.isEmpty()) listOf(0, 1, 2, 3) else s.split(",").mapNotNull { it.toIntOrNull() }
+                    result.success(list)
                 }
                 else -> result.notImplemented()
             }

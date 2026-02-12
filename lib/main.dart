@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'screens/home_screen.dart';
 import 'screens/protected_apps_screen.dart';
+import 'screens/secret_setup_screen.dart';
 
 void main() {
   runApp(const PrivacyProtectionApp());
@@ -19,6 +20,7 @@ class PrivacyProtectionApp extends StatelessWidget {
       routes: {
         '/': (_) => const HomeScreen(),
         '/protected': (_) => const ProtectedAppsScreen(),
+        '/secret_setup': (_) => const SecretSetupScreen(),
       },
       initialRoute: '/',
     );

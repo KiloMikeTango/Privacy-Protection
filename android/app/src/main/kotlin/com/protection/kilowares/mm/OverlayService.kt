@@ -19,6 +19,7 @@ import android.os.Looper
 import android.app.usage.UsageEvents
 import android.app.usage.UsageStatsManager
 import android.view.Gravity
+import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
 import android.widget.FrameLayout
@@ -43,11 +44,19 @@ class OverlayService : Service() {
     private lateinit var prefs: SharedPreferences
     private val prefsName = "privacy_protection_prefs"
     private val keyProtected = "protected_packages"
+    private val keySecretPattern = "secret_tap_pattern"
+    private var secretPattern: List<Int> = listOf(0, 1, 2, 3)
+    private val currentTapSequence = mutableListOf<Int>()
+    private var tempUnlockUntil: Long = 0
     
     private val screenReceiver = object : android.content.BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             when (intent?.action) {
-                Intent.ACTION_SCREEN_OFF -> stopMonitoring()
+                Intent.ACTION_SCREEN_OFF -> {
+                    stopMonitoring()
+                    currentTapSequence.clear()
+                    tempUnlockUntil = 0 // Reset unlock on screen off
+                }
                 Intent.ACTION_SCREEN_ON -> startMonitoring()
             }
         }
@@ -56,6 +65,8 @@ class OverlayService : Service() {
     private val prefListener = SharedPreferences.OnSharedPreferenceChangeListener { sharedPreferences, key ->
         if (key == keyProtected) {
             protectedPackages = sharedPreferences.getStringSet(keyProtected, emptySet()) ?: emptySet()
+        } else if (key == keySecretPattern) {
+            secretPattern = loadSecretPattern()
         }
     }
 
@@ -68,6 +79,7 @@ class OverlayService : Service() {
         prefs = securePrefs()
         prefs.registerOnSharedPreferenceChangeListener(prefListener)
         protectedPackages = prefs.getStringSet(keyProtected, emptySet()) ?: emptySet()
+        secretPattern = loadSecretPattern()
         launcherPackages = queryLauncherPackages()
         
         val filter = android.content.IntentFilter().apply {
@@ -77,6 +89,12 @@ class OverlayService : Service() {
         registerReceiver(screenReceiver, filter)
         
         startMonitoring()
+    }
+
+    private fun loadSecretPattern(): List<Int> {
+        val s = prefs.getString(keySecretPattern, "") ?: ""
+        if (s.isEmpty()) return listOf(0, 1, 2, 3)
+        return s.split(",").mapNotNull { it.toIntOrNull() }
     }
 
     private fun securePrefs(): SharedPreferences {
@@ -118,6 +136,11 @@ class OverlayService : Service() {
         if (monitorRunnable != null) return
         monitorRunnable = Runnable {
             try {
+                if (System.currentTimeMillis() < tempUnlockUntil) {
+                    // Temporarily unlocked
+                    return@Runnable
+                }
+                
                 val newTop = getTopPackage()
                 if (newTop != null) {
                     lastTopPackage = newTop
@@ -201,11 +224,38 @@ class OverlayService : Service() {
 
         val view = FrameLayout(this).apply {
             setBackgroundColor(Color.parseColor("#FFFFFF"))
+            setOnTouchListener { v, event ->
+                if (event.action == MotionEvent.ACTION_DOWN) {
+                    val w = v.width
+                    val h = v.height
+                    val x = event.x
+                    val y = event.y
+                    val col = if (x < w / 2) 0 else 1
+                    val row = if (y < h / 2) 0 else 1
+                    val quadrant = row * 2 + col // 0=TL, 1=TR, 2=BL, 3=BR
+                    
+                    currentTapSequence.add(quadrant)
+                    while (currentTapSequence.size > secretPattern.size) {
+                        currentTapSequence.removeAt(0)
+                    }
+                    
+                    if (currentTapSequence == secretPattern) {
+                        performTempUnlock()
+                        currentTapSequence.clear()
+                    }
+                }
+                true
+            }
         }
 
         overlayView = view
         wm?.addView(view, params)
         isOverlayShowing = true
+    }
+    
+    private fun performTempUnlock() {
+        tempUnlockUntil = System.currentTimeMillis() + 60_000 // 1 minute unlock
+        hideOverlay()
     }
 
     fun hideOverlay() {
