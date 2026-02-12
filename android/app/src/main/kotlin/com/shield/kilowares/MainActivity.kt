@@ -18,6 +18,7 @@ import androidx.security.crypto.MasterKeys
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
+import com.protection.kilowares.mm.OverlayService
 
 class MainActivity : FlutterActivity() {
     private val channelName = "privacy_protection"
