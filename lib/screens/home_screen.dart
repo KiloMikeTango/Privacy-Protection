@@ -133,7 +133,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                             color: _running
                                                 ? colorScheme.primary
                                                 : colorScheme.secondary,
-                                            fontWeight: FontWeight.w800,
+                                            fontWeight: FontWeight.w900,
                                           ),
                                     ),
                                   ),
