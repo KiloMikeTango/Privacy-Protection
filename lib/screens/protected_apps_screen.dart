@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../models/app_info.dart';
 import '../widgets/app_list_item.dart';
 import '../utils/responsive.dart';
+import '../theme/app_theme.dart';
 
 class ProtectedAppsScreen extends StatefulWidget {
   const ProtectedAppsScreen({super.key});
@@ -226,22 +228,22 @@ class _ProtectedAppsScreenState extends State<ProtectedAppsScreen> {
                       slivers: [
                         SliverPadding(
                           padding: EdgeInsets.symmetric(
-                            horizontal: Responsive.w(4),
-                            vertical: Responsive.h(1.5),
+                            horizontal: AppTheme.spacingMd,
+                            vertical: AppTheme.spacingSm,
                           ),
                           sliver: SliverList(
                             delegate: SliverChildListDelegate([
                               _buildSearchField(theme),
-                              SizedBox(height: Responsive.h(1.5)),
+                              const SizedBox(height: AppTheme.spacingMd),
                               _buildStatsRow(theme, totalApps, protectedCount),
                               if (_message.isNotEmpty) ...[
-                                const SizedBox(height: 8),
+                                const SizedBox(height: AppTheme.spacingSm),
                                 Text(
                                   _message,
                                   style: TextStyle(color: colorScheme.error),
                                 ),
                               ],
-                              SizedBox(height: Responsive.h(1.5)),
+                              const SizedBox(height: AppTheme.spacingMd),
                               if (_loading)
                                 LinearProgressIndicator(
                                   backgroundColor: Colors.transparent,
@@ -291,11 +293,9 @@ class _ProtectedAppsScreenState extends State<ProtectedAppsScreen> {
 
   Widget _buildAppBar(BuildContext context) {
     return Padding(
-      padding: EdgeInsets.fromLTRB(
-        Responsive.w(5),
-        Responsive.h(2),
-        Responsive.w(5),
-        Responsive.h(1),
+      padding: EdgeInsets.symmetric(
+        horizontal: AppTheme.spacingMd,
+        vertical: AppTheme.spacingMd,
       ),
       child: Row(
         children: [
@@ -307,10 +307,10 @@ class _ProtectedAppsScreenState extends State<ProtectedAppsScreen> {
           const SizedBox(width: 8),
           Text(
             'Apps',
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+            style: GoogleFonts.inter(
               fontWeight: FontWeight.bold,
               color: Theme.of(context).colorScheme.onSurface,
-              fontSize: Responsive.w(6).clamp(20.0, 28.0),
+              fontSize: 24,
             ),
           ),
         ],
@@ -321,69 +321,61 @@ class _ProtectedAppsScreenState extends State<ProtectedAppsScreen> {
   Widget _buildSearchField(ThemeData theme) {
     return TextField(
       controller: _searchCtrl,
-      style: TextStyle(color: theme.colorScheme.onSurface),
+      style: GoogleFonts.inter(color: theme.colorScheme.onSurface),
       decoration: InputDecoration(
         hintText: 'Search apps...',
-        hintStyle: TextStyle(color: theme.colorScheme.secondary),
+        hintStyle: GoogleFonts.inter(color: theme.colorScheme.secondary),
         prefixIcon: Icon(
           Icons.search_rounded,
           color: theme.colorScheme.secondary,
-        ),
-        fillColor: Colors.white,
-        filled: true,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide.none,
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide.none,
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide(color: theme.colorScheme.primary, width: 1.5),
         ),
       ),
     );
   }
 
   Widget _buildStatsRow(ThemeData theme, int total, int shielded) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          'Total Apps: $total',
-          style: theme.textTheme.bodyMedium?.copyWith(
-            color: theme.colorScheme.secondary,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          decoration: BoxDecoration(
-            color: theme.colorScheme.primary.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Text(
-            'Shielded: $shielded',
-            style: TextStyle(
-              color: theme.colorScheme.primary,
-              fontWeight: FontWeight.bold,
-              fontSize: 12,
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppTheme.spacingSm),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            'Total Apps: $total',
+            style: GoogleFonts.inter(
+              color: theme.colorScheme.secondary,
+              fontWeight: FontWeight.w500,
             ),
           ),
-        ),
-      ],
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.primary.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              'Shielded: $shielded',
+              style: GoogleFonts.inter(
+                color: theme.colorScheme.primary,
+                fontWeight: FontWeight.bold,
+                fontSize: 12,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
   Widget _buildSectionHeader(BuildContext context, String title) {
     return SliverToBoxAdapter(
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppTheme.spacingLg,
+          vertical: AppTheme.spacingSm,
+        ),
         child: Text(
           title.toUpperCase(),
-          style: TextStyle(
+          style: GoogleFonts.inter(
             color: Theme.of(context).colorScheme.secondary,
             fontWeight: FontWeight.bold,
             letterSpacing: 1.2,
@@ -407,8 +399,8 @@ class _ProtectedAppsScreenState extends State<ProtectedAppsScreen> {
               child: FadeInAnimation(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 4,
+                    horizontal: AppTheme.spacingMd,
+                    vertical: AppTheme.spacingXs,
                   ),
                   child: AppListItem(
                     app: app,
@@ -442,7 +434,10 @@ class _ProtectedAppsScreenState extends State<ProtectedAppsScreen> {
           child: SizeTransition(
             sizeFactor: animation,
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppTheme.spacingMd,
+                vertical: AppTheme.spacingXs,
+              ),
               child: AppListItem(
                 app: app,
                 isChecked: isProtected,
@@ -466,7 +461,10 @@ class _ProtectedAppsScreenState extends State<ProtectedAppsScreen> {
       child: SizeTransition(
         sizeFactor: animation,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppTheme.spacingMd,
+            vertical: AppTheme.spacingXs,
+          ),
           child: AppListItem(
             app: app,
             isChecked: !wasProtected,

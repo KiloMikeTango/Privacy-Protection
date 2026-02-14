@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../widgets/nav_card.dart';
 import '../widgets/shield_pulse_button.dart';
 import '../utils/responsive.dart';
+import '../theme/app_theme.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -64,125 +66,184 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     Responsive.init(context);
-    return Scaffold(
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          final size = constraints.biggest;
-          final isTablet = size.shortestSide > 600;
-          final contentWidth = isTablet ? 500.0 : size.width;
-          final circle = isTablet ? 200.0 : size.shortestSide * 0.45;
-          final theme = Theme.of(context);
-          final colorScheme = theme.colorScheme;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
 
-          return Container(
-            color: colorScheme.background,
-            child: SafeArea(
-              child: Center(
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(maxWidth: contentWidth),
+    return Scaffold(
+      backgroundColor: colorScheme.background,
+      body: SafeArea(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final size = constraints.biggest;
+            final isTablet = size.shortestSide > 600;
+            final contentWidth = isTablet ? 500.0 : size.width;
+            final circle = isTablet ? 200.0 : size.shortestSide * 0.45;
+
+            return Center(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: contentWidth),
+                child: AnimationLimiter(
                   child: Padding(
-                    padding: EdgeInsets.all(Responsive.w(6)),
-                    child: AnimationLimiter(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: AnimationConfiguration.toStaggeredList(
-                          duration: const Duration(milliseconds: 600),
-                          childAnimationBuilder: (widget) => SlideAnimation(
-                            verticalOffset: 50.0,
-                            child: FadeInAnimation(child: widget),
-                          ),
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text(
-                                  'Shield',
-                                  style: theme.textTheme.headlineMedium
-                                      ?.copyWith(
-                                        fontWeight: FontWeight.bold,
-                                        letterSpacing: -0.5,
-                                        color: colorScheme.onSurface,
-                                        fontSize: isTablet ? 48 : null,
-                                      ),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppTheme.spacingLg,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: AnimationConfiguration.toStaggeredList(
+                        duration: const Duration(milliseconds: 600),
+                        childAnimationBuilder: (widget) => SlideAnimation(
+                          verticalOffset: 50.0,
+                          child: FadeInAnimation(child: widget),
+                        ),
+                        children: [
+                          const SizedBox(height: AppTheme.spacing2Xl),
+
+                          // Header Status
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Container(
+                                width: 8,
+                                height: 8,
+                                decoration: BoxDecoration(
+                                  color: _running
+                                      ? AppTheme.success
+                                      : AppTheme.secondary,
+                                  shape: BoxShape.circle,
                                 ),
-                              ],
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                _running ? 'PROTECTED' : 'UNPROTECTED',
+                                style: AppTheme.typography.labelLarge?.copyWith(
+                                  color: _running
+                                      ? AppTheme.success
+                                      : AppTheme.secondary,
+                                  letterSpacing: 1.5,
+                                ),
+                              ),
+                            ],
+                          ),
+
+                          const SizedBox(height: AppTheme.spacing2Xl),
+
+                          // Main Pulse Button
+                          Center(
+                            child: ShieldPulseButton(
+                              isRunning: _running,
+                              isBusy: _busy,
+                              onTap: _toggle,
+                              size: circle,
                             ),
-                            SizedBox(height: size.height * 0.05),
-                            Center(
-                              child: ShieldPulseButton(
-                                isRunning: _running,
-                                isBusy: _busy,
-                                onTap: _toggle,
-                                size: circle,
+                          ),
+
+                          if (_message.isNotEmpty) ...[
+                            const SizedBox(height: AppTheme.spacingMd),
+                            Container(
+                              padding: const EdgeInsets.all(AppTheme.spacingMd),
+                              decoration: BoxDecoration(
+                                color: colorScheme.error.withOpacity(0.05),
+                                borderRadius: BorderRadius.circular(
+                                  AppTheme.radiusMd,
+                                ),
+                                border: Border.all(
+                                  color: colorScheme.error.withOpacity(0.1),
+                                ),
+                              ),
+                              child: Text(
+                                _message,
+                                textAlign: TextAlign.center,
+                                style: AppTheme.typography.bodyMedium?.copyWith(
+                                  color: colorScheme.error,
+                                ),
                               ),
                             ),
-                            SizedBox(height: size.height * 0.05),
-                            Center(
-                              child: Column(
-                                children: [
-                                  AnimatedSwitcher(
-                                    duration: const Duration(milliseconds: 300),
-                                    child: Text(
-                                      _running
-                                          ? 'ON'
-                                          : 'OFF',
-                                      key: ValueKey(_running),
-                                      style: theme.textTheme.titleLarge
-                                          ?.copyWith(
-                                            color: _running
-                                                ? colorScheme.primary
-                                                : colorScheme.secondary,
-                                            fontWeight: FontWeight.w900,
-                                          ),
-                                    ),
-                                  ),
-                                  if (_message.isNotEmpty) ...[
-                                    const SizedBox(height: 12),
-                                    Text(
-                                      _message,
-                                      textAlign: TextAlign.center,
-                                      style: TextStyle(
-                                        color: colorScheme.error,
-                                        fontSize: 13,
-                                      ),
-                                    ),
-                                  ],
-                                ],
-                              ),
-                            ),
-                            const SizedBox(height: 32),
-                            Hero(
-                              tag: 'nav_card',
-                              child: Material(
-                                type: MaterialType.transparency,
-                                child: NavCard(
+                          ],
+
+                          const Spacer(),
+
+                          // Dashboard Grid
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _buildDashboardCard(
+                                  context,
                                   title: 'Apps',
-                                  subtitle: 'Manage your apps',
+                                  subtitle: 'Manage',
                                   icon: Icons.apps_rounded,
                                   onTap: () => Navigator.of(
                                     context,
                                   ).pushNamed('/protected'),
+                                  colorScheme: colorScheme,
                                 ),
                               ),
-                            ),
-                            const SizedBox(height: 16),
-                            NavCard(
-                              title: 'Secret Unlock',
-                              subtitle: 'Configure tap pattern',
-                              icon: Icons.security_rounded,
-                              onTap: () => Navigator.of(context).pushNamed('/secret_setup'),
-                            ),
-                          ],
-                        ),
+                              const SizedBox(width: AppTheme.spacingMd),
+                              Expanded(
+                                child: _buildDashboardCard(
+                                  context,
+                                  title: 'Unlock',
+                                  subtitle: 'Setup',
+                                  icon: Icons.fingerprint_rounded,
+                                  onTap: () => Navigator.of(
+                                    context,
+                                  ).pushNamed('/secret_setup'),
+                                  colorScheme: colorScheme,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: AppTheme.spacing2Xl),
+                        ],
                       ),
                     ),
                   ),
                 ),
               ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDashboardCard(
+    BuildContext context, {
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required VoidCallback onTap,
+    required ColorScheme colorScheme,
+  }) {
+    return Container(
+      height: 140,
+      decoration: BoxDecoration(
+        color: colorScheme.surface,
+        borderRadius: BorderRadius.circular(AppTheme.radiusLg),
+        border: Border.all(color: AppTheme.border),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(AppTheme.radiusLg),
+          child: Padding(
+            padding: const EdgeInsets.all(AppTheme.spacingLg),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Icon(icon, color: AppTheme.primary, size: 28),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title, style: AppTheme.typography.titleLarge),
+                    Text(subtitle, style: AppTheme.typography.bodyMedium),
+                  ],
+                ),
+              ],
             ),
-          );
-        },
+          ),
+        ),
       ),
     );
   }

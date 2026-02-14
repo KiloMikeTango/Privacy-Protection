@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../theme/app_theme.dart';
 
 class SecretSetupScreen extends StatefulWidget {
   const SecretSetupScreen({super.key});
@@ -165,79 +166,104 @@ class _SecretSetupScreenState extends State<SecretSetupScreen> {
       return Scaffold(
         backgroundColor: colorScheme.background,
         appBar: AppBar(
-          backgroundColor: Colors.transparent,
-          elevation: 0,
           leading: IconButton(
-            icon: Icon(Icons.arrow_back, color: colorScheme.onSurface),
+            icon: Icon(
+              Icons.arrow_back_ios_new_rounded,
+              color: colorScheme.onSurface,
+            ),
             onPressed: () => Navigator.pop(context),
           ),
         ),
         body: SafeArea(
           child: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.lock_outline_rounded,
-                  size: 64,
-                  color: colorScheme.primary,
-                ),
-                const SizedBox(height: 24),
-                Text(
-                  "Current Pattern",
-                  style: GoogleFonts.inter(
-                    fontSize: 24,
-                    fontWeight: FontWeight.w600,
-                    color: colorScheme.onSurface,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 400),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(AppTheme.spacingXl),
+                    decoration: BoxDecoration(
+                      color: colorScheme.primary.withOpacity(0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.lock_outline_rounded,
+                      size: 48,
+                      color: colorScheme.primary,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 16),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 24,
-                    vertical: 16,
-                  ),
-                  margin: const EdgeInsets.symmetric(horizontal: 24),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
-                        blurRadius: 10,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: Text(
-                    _existingPattern.map((q) => (q + 1).toString()).join("-"),
-                    textAlign: TextAlign.center,
+                  const SizedBox(height: AppTheme.spacingLg),
+                  Text(
+                    "Current Pattern",
                     style: GoogleFonts.inter(
-                      fontSize: 28,
+                      fontSize: 24,
                       fontWeight: FontWeight.bold,
                       color: colorScheme.onSurface,
-                      letterSpacing: 2,
                     ),
                   ),
-                ),
-                const SizedBox(height: 48),
-                ElevatedButton.icon(
-                  onPressed: _startEditing,
-                  icon: const Icon(Icons.edit_rounded),
-                  label: const Text("Change Pattern"),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: colorScheme.primary,
-                    foregroundColor: colorScheme.onPrimary,
+                  const SizedBox(height: AppTheme.spacingLg),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(AppTheme.spacingLg),
+                    margin: const EdgeInsets.symmetric(
+                      horizontal: AppTheme.spacingLg,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(AppTheme.radiusLg),
+                      border: Border.all(color: Colors.grey.withOpacity(0.1)),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      children: [
+                        Text(
+                          "TAP SEQUENCE",
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: colorScheme.secondary,
+                            letterSpacing: 1.5,
+                          ),
+                        ),
+                        const SizedBox(height: AppTheme.spacingMd),
+                        Text(
+                          _existingPattern
+                              .map((q) => (q + 1).toString())
+                              .join("-"),
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.inter(
+                            fontSize: 32,
+                            fontWeight: FontWeight.bold,
+                            color: colorScheme.primary,
+                            letterSpacing: 4,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: AppTheme.spacing2Xl),
+                  Padding(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 32,
-                      vertical: 16,
+                      horizontal: AppTheme.spacingLg,
                     ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: _startEditing,
+                        icon: const Icon(Icons.edit_rounded),
+                        label: const Text("Change Pattern"),
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
@@ -246,11 +272,11 @@ class _SecretSetupScreenState extends State<SecretSetupScreen> {
 
     final currentList = _isConfirming ? _confirmedPattern : _pattern;
     final String instruction = _isConfirming
-        ? "Confirm your pattern"
-        : (_isChanging ? "Change your pattern" : "Record your pattern");
+        ? "Confirm Pattern"
+        : (_isChanging ? "New Pattern" : "Set Pattern");
     final String subInstruction = _isConfirming
-        ? "Tap the same sequence again."
-        : "Tap at least 6 times.";
+        ? "Re-enter your sequence to confirm"
+        : "Tap at least 6 times to create sequence";
 
     final String visualPattern = currentList
         .map((q) => (q + 1).toString())
@@ -261,7 +287,6 @@ class _SecretSetupScreenState extends State<SecretSetupScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            // Header similar to Android settings
             Padding(
               padding: const EdgeInsets.fromLTRB(24, 40, 24, 20),
               child: Column(
@@ -270,7 +295,7 @@ class _SecretSetupScreenState extends State<SecretSetupScreen> {
                     instruction,
                     style: GoogleFonts.inter(
                       fontSize: 24,
-                      fontWeight: FontWeight.w600,
+                      fontWeight: FontWeight.bold,
                       color: colorScheme.onSurface,
                     ),
                   ),
@@ -301,7 +326,7 @@ class _SecretSetupScreenState extends State<SecretSetupScreen> {
                       ),
                       decoration: BoxDecoration(
                         color: Colors.white,
-                        borderRadius: BorderRadius.circular(24),
+                        borderRadius: BorderRadius.circular(32),
                         boxShadow: [
                           BoxShadow(
                             color: Colors.black.withOpacity(0.05),
@@ -311,10 +336,10 @@ class _SecretSetupScreenState extends State<SecretSetupScreen> {
                         ],
                       ),
                       child: ClipRRect(
-                        borderRadius: BorderRadius.circular(24),
+                        borderRadius: BorderRadius.circular(32),
                         child: Stack(
                           children: [
-                            // Subtle Grid lines
+                            // Clean Grid lines
                             Center(
                               child: Container(
                                 width: 1,
@@ -329,68 +354,38 @@ class _SecretSetupScreenState extends State<SecretSetupScreen> {
                                 color: Colors.grey.shade100,
                               ),
                             ),
-                            // Minimal Quadrant Labels
-                            const Positioned(
-                              top: 16,
-                              left: 16,
-                              child: Text(
-                                "1",
-                                style: TextStyle(
-                                  color: Colors.black12,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                            const Positioned(
-                              top: 16,
-                              right: 16,
-                              child: Text(
-                                "2",
-                                style: TextStyle(
-                                  color: Colors.black12,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                            const Positioned(
-                              bottom: 16,
-                              left: 16,
-                              child: Text(
-                                "3",
-                                style: TextStyle(
-                                  color: Colors.black12,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                            const Positioned(
-                              bottom: 16,
-                              right: 16,
-                              child: Text(
-                                "4",
-                                style: TextStyle(
-                                  color: Colors.black12,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
+                            // Modern Quadrant Labels
+                            _buildQuadrantLabel("1", top: 24, left: 24),
+                            _buildQuadrantLabel("2", top: 24, right: 24),
+                            _buildQuadrantLabel("3", bottom: 24, left: 24),
+                            _buildQuadrantLabel("4", bottom: 24, right: 24),
 
-                            // Feedback Visualization (Dots)
+                            // Feedback Visualization
                             if (currentList.isNotEmpty)
                               Center(
-                                child: Padding(
+                                child: Container(
                                   padding: const EdgeInsets.symmetric(
-                                    horizontal: 32.0,
+                                    horizontal: 24,
+                                    vertical: 12,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: colorScheme.surface.withOpacity(0.9),
+                                    borderRadius: BorderRadius.circular(16),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withOpacity(0.05),
+                                        blurRadius: 10,
+                                      ),
+                                    ],
                                   ),
                                   child: Text(
                                     visualPattern,
                                     textAlign: TextAlign.center,
                                     style: GoogleFonts.inter(
-                                      fontSize: 32,
+                                      fontSize: 24,
                                       fontWeight: FontWeight.bold,
-                                      color: colorScheme.primary.withOpacity(
-                                        0.2,
-                                      ),
+                                      color: colorScheme.primary,
+                                      letterSpacing: 2,
                                     ),
                                   ),
                                 ),
@@ -412,44 +407,59 @@ class _SecretSetupScreenState extends State<SecretSetupScreen> {
                 children: [
                   TextButton(
                     onPressed: _reset,
-                    child: Text(
-                      _isConfirming ? "Cancel" : "Clear",
-                      style: GoogleFonts.inter(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                        color: colorScheme.secondary,
-                      ),
-                    ),
+                    child: Text(_isConfirming ? "Cancel" : "Clear"),
                   ),
 
                   ElevatedButton(
                     onPressed: _isConfirming
                         ? (_confirmedPattern.isNotEmpty ? _save : null)
                         : (_pattern.length >= 6 ? _advanceToConfirm : null),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: colorScheme.primary,
-                      foregroundColor: colorScheme.onPrimary,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 32,
-                        vertical: 16,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      elevation: 0,
-                    ),
-                    child: Text(
-                      _isConfirming ? "Confirm" : "Next",
-                      style: GoogleFonts.inter(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
+                    child: Text(_isConfirming ? "Confirm" : "Next"),
                   ),
                 ],
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildQuadrantLabel(
+    String text, {
+    double? top,
+    double? bottom,
+    double? left,
+    double? right,
+  }) {
+    return Positioned(
+      top: top,
+      bottom: bottom,
+      left: left,
+      right: right,
+      child: Container(
+        width: 48,
+        height: 48,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          shape: BoxShape.circle,
+          border: Border.all(color: AppTheme.border),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        alignment: Alignment.center,
+        child: Text(
+          text,
+          style: GoogleFonts.inter(
+            color: AppTheme.secondary,
+            fontWeight: FontWeight.bold,
+            fontSize: 16,
+          ),
         ),
       ),
     );
