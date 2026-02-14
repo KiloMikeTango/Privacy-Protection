@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_theme.dart';
+import '../widgets/pattern_sequence_display.dart';
+import '../widgets/pattern_input_grid.dart';
 
 class SecretSetupScreen extends StatefulWidget {
   const SecretSetupScreen({super.key});
@@ -52,17 +54,19 @@ class _SecretSetupScreenState extends State<SecretSetupScreen> {
     });
   }
 
-  void _handleTap(TapUpDetails details, Size size) {
+  void _handleGridTap(int quadrant) {
     if (_saving) return;
 
-    final x = details.localPosition.dx;
-    final y = details.localPosition.dy;
-    final w = size.width;
-    final h = size.height;
-
-    int col = (x < w / 2) ? 0 : 1;
-    int row = (y < h / 2) ? 0 : 1;
-    int quadrant = row * 2 + col; // 0=TL, 1=TR, 2=BL, 3=BR
+    if ((_isConfirming && _confirmedPattern.length >= 8) ||
+        (!_isConfirming && _pattern.length >= 8)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Maximum pattern length is 8 taps.'),
+          duration: Duration(milliseconds: 1000),
+        ),
+      );
+      return;
+    }
 
     setState(() {
       if (_isConfirming) {
@@ -155,21 +159,6 @@ class _SecretSetupScreenState extends State<SecretSetupScreen> {
     }
   }
 
-  String _qName(int q) {
-    switch (q) {
-      case 0:
-        return "TL"; // Top-Left
-      case 1:
-        return "TR"; // Top-Right
-      case 2:
-        return "BL"; // Bottom-Left
-      case 3:
-        return "BR"; // Bottom-Right
-      default:
-        return "?";
-    }
-  }
-
   bool get _isPatternMatched {
     if (_confirmedPattern.length != _pattern.length) return false;
     for (int i = 0; i < _pattern.length; i++) {
@@ -249,6 +238,11 @@ class _SecretSetupScreenState extends State<SecretSetupScreen> {
                     ),
                   ),
                   const SizedBox(height: AppTheme.spacingLg),
+                  // Use PatternSequenceDisplay for overview too?
+                  // It's editable style vs static style.
+                  // Let's reuse the new widget but maybe make it read-only/static.
+                  // For now, keep the overview as is or refactor later.
+                  // The user focused on "tap sequences for configuration".
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(AppTheme.spacingLg),
@@ -279,18 +273,7 @@ class _SecretSetupScreenState extends State<SecretSetupScreen> {
                           ),
                         ),
                         const SizedBox(height: AppTheme.spacingMd),
-                        Text(
-                          _existingPattern
-                              .map((q) => (q + 1).toString())
-                              .join("-"),
-                          textAlign: TextAlign.center,
-                          style: GoogleFonts.inter(
-                            fontSize: 32,
-                            fontWeight: FontWeight.bold,
-                            color: colorScheme.primary,
-                            letterSpacing: 4,
-                          ),
-                        ),
+                        PatternSequenceDisplay(pattern: _existingPattern),
                       ],
                     ),
                   ),
@@ -322,11 +305,7 @@ class _SecretSetupScreenState extends State<SecretSetupScreen> {
         : (_isChanging ? "New Pattern" : "Set Pattern");
     final String subInstruction = _isConfirming
         ? "Re-enter your sequence to confirm"
-        : "Tap at least 6 times to create sequence";
-
-    final String visualPattern = currentList
-        .map((q) => (q + 1).toString())
-        .join("-");
+        : "Tap 6-8 times to create sequence";
 
     return Scaffold(
       backgroundColor: colorScheme.background,
@@ -367,93 +346,15 @@ class _SecretSetupScreenState extends State<SecretSetupScreen> {
               ),
 
               // Tap Area
-              Expanded(
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    return GestureDetector(
-                      onTapUp: (details) =>
-                          _handleTap(details, constraints.biggest),
-                      child: Container(
-                        margin: const EdgeInsets.symmetric(
-                          horizontal: 24,
-                          vertical: 12,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(32),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.05),
-                              blurRadius: 20,
-                              offset: const Offset(0, 8),
-                            ),
-                          ],
-                        ),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(32),
-                          child: Stack(
-                            children: [
-                              // Clean Grid lines
-                              Center(
-                                child: Container(
-                                  width: 1,
-                                  height: double.infinity,
-                                  color: Colors.grey.shade100,
-                                ),
-                              ),
-                              Center(
-                                child: Container(
-                                  width: double.infinity,
-                                  height: 1,
-                                  color: Colors.grey.shade100,
-                                ),
-                              ),
-                              // Modern Quadrant Labels
-                              _buildQuadrantLabel("1", top: 24, left: 24),
-                              _buildQuadrantLabel("2", top: 24, right: 24),
-                              _buildQuadrantLabel("3", bottom: 24, left: 24),
-                              _buildQuadrantLabel("4", bottom: 24, right: 24),
+              Expanded(child: PatternInputGrid(onTap: _handleGridTap)),
 
-                              // Feedback Visualization
-                              if (currentList.isNotEmpty)
-                                Center(
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 24,
-                                      vertical: 12,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: colorScheme.surface.withOpacity(
-                                        0.9,
-                                      ),
-                                      borderRadius: BorderRadius.circular(16),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: Colors.black.withOpacity(0.05),
-                                          blurRadius: 10,
-                                        ),
-                                      ],
-                                    ),
-                                    child: Text(
-                                      visualPattern,
-                                      textAlign: TextAlign.center,
-                                      style: GoogleFonts.inter(
-                                        fontSize: 24,
-                                        fontWeight: FontWeight.bold,
-                                        color: colorScheme.primary,
-                                        letterSpacing: 2,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    );
-                  },
+              // Pattern Sequence Display
+              if (currentList.isNotEmpty)
+                PatternSequenceDisplay(
+                  pattern: currentList,
+                  isConfirming: _isConfirming,
+                  isMatched: _isPatternMatched,
                 ),
-              ),
 
               // Bottom Action Bar
               Container(
@@ -482,46 +383,6 @@ class _SecretSetupScreenState extends State<SecretSetupScreen> {
                 ),
               ),
             ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildQuadrantLabel(
-    String text, {
-    double? top,
-    double? bottom,
-    double? left,
-    double? right,
-  }) {
-    return Positioned(
-      top: top,
-      bottom: bottom,
-      left: left,
-      right: right,
-      child: Container(
-        width: 48,
-        height: 48,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          shape: BoxShape.circle,
-          border: Border.all(color: AppTheme.border),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 4,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        alignment: Alignment.center,
-        child: Text(
-          text,
-          style: GoogleFonts.inter(
-            color: AppTheme.secondary,
-            fontWeight: FontWeight.bold,
-            fontSize: 16,
           ),
         ),
       ),
