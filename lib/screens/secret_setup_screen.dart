@@ -129,7 +129,17 @@ class _SecretSetupScreenState extends State<SecretSetupScreen> {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(const SnackBar(content: Text('Secret pattern saved!')));
-        Navigator.pop(context);
+
+        // Check if we need to redirect to home (if forced setup)
+        final args =
+            ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+        final bool forceSetup = args?['forceSetup'] ?? false;
+
+        if (forceSetup) {
+          Navigator.of(context).pushReplacementNamed('/home');
+        } else {
+          Navigator.pop(context);
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -157,12 +167,45 @@ class _SecretSetupScreenState extends State<SecretSetupScreen> {
     }
   }
 
+  bool get _isPatternMatched {
+    if (_confirmedPattern.length != _pattern.length) return false;
+    for (int i = 0; i < _pattern.length; i++) {
+      if (_pattern[i] != _confirmedPattern[i]) return false;
+    }
+    return true;
+  }
+
+  void _handleCancel() {
+    final args =
+        ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+    final bool forceSetup = args?['forceSetup'] ?? false;
+
+    if (forceSetup) {
+      // If user has started entering a pattern, allow clearing it.
+      // Otherwise allow exiting.
+      if (!_isConfirming && _pattern.isNotEmpty) {
+        _reset();
+      } else if (_isConfirming) {
+        _reset(); // Cancel confirmation and restart
+      } else {
+        SystemNavigator.pop(); // Exit app
+      }
+    } else {
+      _reset(); // Just clear
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
-    if (_showOverview) {
+    // Check if we are in "Force Setup" mode
+    final args =
+        ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+    final bool forceSetup = args?['forceSetup'] ?? false;
+
+    if (_showOverview && !forceSetup) {
       return Scaffold(
         backgroundColor: colorScheme.background,
         appBar: AppBar(
@@ -284,142 +327,159 @@ class _SecretSetupScreenState extends State<SecretSetupScreen> {
 
     return Scaffold(
       backgroundColor: colorScheme.background,
-      body: SafeArea(
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 40, 24, 20),
-              child: Column(
-                children: [
-                  Text(
-                    instruction,
-                    style: GoogleFonts.inter(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: colorScheme.onSurface,
+      body: WillPopScope(
+        onWillPop: () async {
+          // Block back button if forced setup
+          return !forceSetup;
+        },
+        child: SafeArea(
+          child: Column(
+            children: [
+              // Header similar to Android settings
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 40, 24, 20),
+                child: Column(
+                  children: [
+                    Text(
+                      instruction,
+                      style: GoogleFonts.inter(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: colorScheme.onSurface,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    subInstruction,
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.inter(
-                      fontSize: 14,
-                      color: colorScheme.onSurface.withOpacity(0.6),
+                    const SizedBox(height: 8),
+                    Text(
+                      forceSetup
+                          ? "You must set a secret unlock pattern to continue."
+                          : subInstruction,
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        color: colorScheme.onSurface.withOpacity(0.6),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
 
-            // Tap Area
-            Expanded(
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  return GestureDetector(
-                    onTapUp: (details) =>
-                        _handleTap(details, constraints.biggest),
-                    child: Container(
-                      margin: const EdgeInsets.symmetric(
-                        horizontal: 24,
-                        vertical: 12,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(32),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.05),
-                            blurRadius: 20,
-                            offset: const Offset(0, 8),
-                          ),
-                        ],
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(32),
-                        child: Stack(
-                          children: [
-                            // Clean Grid lines
-                            Center(
-                              child: Container(
-                                width: 1,
-                                height: double.infinity,
-                                color: Colors.grey.shade100,
-                              ),
+              // Tap Area
+              Expanded(
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    return GestureDetector(
+                      onTapUp: (details) =>
+                          _handleTap(details, constraints.biggest),
+                      child: Container(
+                        margin: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 12,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(32),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.05),
+                              blurRadius: 20,
+                              offset: const Offset(0, 8),
                             ),
-                            Center(
-                              child: Container(
-                                width: double.infinity,
-                                height: 1,
-                                color: Colors.grey.shade100,
-                              ),
-                            ),
-                            // Modern Quadrant Labels
-                            _buildQuadrantLabel("1", top: 24, left: 24),
-                            _buildQuadrantLabel("2", top: 24, right: 24),
-                            _buildQuadrantLabel("3", bottom: 24, left: 24),
-                            _buildQuadrantLabel("4", bottom: 24, right: 24),
-
-                            // Feedback Visualization
-                            if (currentList.isNotEmpty)
+                          ],
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(32),
+                          child: Stack(
+                            children: [
+                              // Clean Grid lines
                               Center(
                                 child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 24,
-                                    vertical: 12,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: colorScheme.surface.withOpacity(0.9),
-                                    borderRadius: BorderRadius.circular(16),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.black.withOpacity(0.05),
-                                        blurRadius: 10,
+                                  width: 1,
+                                  height: double.infinity,
+                                  color: Colors.grey.shade100,
+                                ),
+                              ),
+                              Center(
+                                child: Container(
+                                  width: double.infinity,
+                                  height: 1,
+                                  color: Colors.grey.shade100,
+                                ),
+                              ),
+                              // Modern Quadrant Labels
+                              _buildQuadrantLabel("1", top: 24, left: 24),
+                              _buildQuadrantLabel("2", top: 24, right: 24),
+                              _buildQuadrantLabel("3", bottom: 24, left: 24),
+                              _buildQuadrantLabel("4", bottom: 24, right: 24),
+
+                              // Feedback Visualization
+                              if (currentList.isNotEmpty)
+                                Center(
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 24,
+                                      vertical: 12,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: colorScheme.surface.withOpacity(
+                                        0.9,
                                       ),
-                                    ],
-                                  ),
-                                  child: Text(
-                                    visualPattern,
-                                    textAlign: TextAlign.center,
-                                    style: GoogleFonts.inter(
-                                      fontSize: 24,
-                                      fontWeight: FontWeight.bold,
-                                      color: colorScheme.primary,
-                                      letterSpacing: 2,
+                                      borderRadius: BorderRadius.circular(16),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withOpacity(0.05),
+                                          blurRadius: 10,
+                                        ),
+                                      ],
+                                    ),
+                                    child: Text(
+                                      visualPattern,
+                                      textAlign: TextAlign.center,
+                                      style: GoogleFonts.inter(
+                                        fontSize: 24,
+                                        fontWeight: FontWeight.bold,
+                                        color: colorScheme.primary,
+                                        letterSpacing: 2,
+                                      ),
                                     ),
                                   ),
                                 ),
-                              ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
+                    );
+                  },
+                ),
+              ),
+
+              // Bottom Action Bar
+              Container(
+                padding: const EdgeInsets.all(24),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    TextButton(
+                      onPressed: _handleCancel,
+                      child: Text(
+                        _isConfirming
+                            ? "Cancel"
+                            : (forceSetup
+                                  ? (_pattern.isNotEmpty ? "Clear" : "Exit")
+                                  : "Clear"),
+                      ),
                     ),
-                  );
-                },
-              ),
-            ),
 
-            // Bottom Action Bar
-            Container(
-              padding: const EdgeInsets.all(24),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  TextButton(
-                    onPressed: _reset,
-                    child: Text(_isConfirming ? "Cancel" : "Clear"),
-                  ),
-
-                  ElevatedButton(
-                    onPressed: _isConfirming
-                        ? (_confirmedPattern.isNotEmpty ? _save : null)
-                        : (_pattern.length >= 6 ? _advanceToConfirm : null),
-                    child: Text(_isConfirming ? "Confirm" : "Next"),
-                  ),
-                ],
+                    ElevatedButton(
+                      onPressed: _isConfirming
+                          ? (_isPatternMatched ? _save : null)
+                          : (_pattern.length >= 6 ? _advanceToConfirm : null),
+                      child: Text(_isConfirming ? "Confirm" : "Next"),
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
