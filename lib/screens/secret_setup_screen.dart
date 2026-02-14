@@ -15,6 +15,41 @@ class _SecretSetupScreenState extends State<SecretSetupScreen> {
   final List<int> _confirmedPattern = [];
   bool _saving = false;
   bool _isConfirming = false; // false = Recording, true = Confirming
+  bool _isChanging = false; // false = Setup, true = Change
+  List<int> _existingPattern = []; // To display in overview mode
+  bool _showOverview = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkExistingPattern();
+  }
+
+  Future<void> _checkExistingPattern() async {
+    try {
+      final List<dynamic> result = await _channel.invokeMethod(
+        'getSecretPattern',
+      );
+      final List<int> current = result.map((e) => e as int).toList();
+
+      if (current.length >= 6) {
+        setState(() {
+          _isChanging = true;
+          _showOverview = true;
+          _existingPattern = current;
+        });
+      }
+    } catch (_) {}
+  }
+
+  void _startEditing() {
+    setState(() {
+      _showOverview = false;
+      _pattern.clear();
+      _confirmedPattern.clear();
+      _isConfirming = false;
+    });
+  }
 
   void _handleTap(TapUpDetails details, Size size) {
     if (_saving) return;
@@ -126,13 +161,100 @@ class _SecretSetupScreenState extends State<SecretSetupScreen> {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
+    if (_showOverview) {
+      return Scaffold(
+        backgroundColor: colorScheme.background,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          leading: IconButton(
+            icon: Icon(Icons.arrow_back, color: colorScheme.onSurface),
+            onPressed: () => Navigator.pop(context),
+          ),
+        ),
+        body: SafeArea(
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.lock_outline_rounded,
+                  size: 64,
+                  color: colorScheme.primary,
+                ),
+                const SizedBox(height: 24),
+                Text(
+                  "Current Pattern",
+                  style: GoogleFonts.inter(
+                    fontSize: 24,
+                    fontWeight: FontWeight.w600,
+                    color: colorScheme.onSurface,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 16,
+                  ),
+                  margin: const EdgeInsets.symmetric(horizontal: 24),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Text(
+                    _existingPattern.map((q) => (q + 1).toString()).join("-"),
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.inter(
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                      color: colorScheme.onSurface,
+                      letterSpacing: 2,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 48),
+                ElevatedButton.icon(
+                  onPressed: _startEditing,
+                  icon: const Icon(Icons.edit_rounded),
+                  label: const Text("Change Pattern"),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: colorScheme.primary,
+                    foregroundColor: colorScheme.onPrimary,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 32,
+                      vertical: 16,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     final currentList = _isConfirming ? _confirmedPattern : _pattern;
     final String instruction = _isConfirming
         ? "Confirm your pattern"
-        : "Record your pattern";
+        : (_isChanging ? "Change your pattern" : "Record your pattern");
     final String subInstruction = _isConfirming
         ? "Tap the same sequence again."
         : "Tap at least 6 times.";
+
+    final String visualPattern = currentList
+        .map((q) => (q + 1).toString())
+        .join("-");
 
     return Scaffold(
       backgroundColor: colorScheme.background,
@@ -256,12 +378,20 @@ class _SecretSetupScreenState extends State<SecretSetupScreen> {
                             // Feedback Visualization (Dots)
                             if (currentList.isNotEmpty)
                               Center(
-                                child: Text(
-                                  "${currentList.length} Taps",
-                                  style: GoogleFonts.inter(
-                                    fontSize: 32,
-                                    fontWeight: FontWeight.bold,
-                                    color: colorScheme.primary.withOpacity(0.2),
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 32.0,
+                                  ),
+                                  child: Text(
+                                    visualPattern,
+                                    textAlign: TextAlign.center,
+                                    style: GoogleFonts.inter(
+                                      fontSize: 32,
+                                      fontWeight: FontWeight.bold,
+                                      color: colorScheme.primary.withOpacity(
+                                        0.2,
+                                      ),
+                                    ),
                                   ),
                                 ),
                               ),
@@ -295,7 +425,7 @@ class _SecretSetupScreenState extends State<SecretSetupScreen> {
                   ElevatedButton(
                     onPressed: _isConfirming
                         ? (_confirmedPattern.isNotEmpty ? _save : null)
-                        : (_pattern.isNotEmpty ? _advanceToConfirm : null),
+                        : (_pattern.length >= 6 ? _advanceToConfirm : null),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: colorScheme.primary,
                       foregroundColor: colorScheme.onPrimary,
