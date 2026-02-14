@@ -4,10 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 class PatternInputGrid extends StatefulWidget {
   final void Function(int quadrant) onTap;
 
-  const PatternInputGrid({
-    super.key,
-    required this.onTap,
-  });
+  const PatternInputGrid({super.key, required this.onTap});
 
   @override
   State<PatternInputGrid> createState() => _PatternInputGridState();
@@ -48,7 +45,7 @@ class _PatternInputGridState extends State<PatternInputGrid> {
         final double size = constraints.maxWidth < constraints.maxHeight
             ? constraints.maxWidth
             : constraints.maxHeight;
-        
+
         // Center the grid within the available space
         return Center(
           child: SizedBox(
@@ -88,12 +85,14 @@ class _PatternInputGridState extends State<PatternInputGrid> {
                           color: Colors.grey.shade100,
                         ),
                       ),
-                      
-                      // Labels
+
+                      // Labels - Adjusted positions to be clearly visible
+                      // even with overlay at bottom
                       _buildQuadrantLabel("1", 0, top: 24, left: 24),
                       _buildQuadrantLabel("2", 1, top: 24, right: 24),
-                      _buildQuadrantLabel("3", 2, bottom: 24, left: 24),
-                      _buildQuadrantLabel("4", 3, bottom: 24, right: 24),
+                      // Move bottom labels up slightly to avoid potential overlap if grid is small
+                      _buildQuadrantLabel("3", 2, bottom: 40, left: 24),
+                      _buildQuadrantLabel("4", 3, bottom: 40, right: 24),
                     ],
                   ),
                 ),
@@ -116,7 +115,7 @@ class _PatternInputGridState extends State<PatternInputGrid> {
     final bool isTapped = _lastTappedQuadrant == quadrantIndex;
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    
+
     // Responsive scaling for label size could be added here if needed
     // For now, fixed 48x48 is standard tap target size.
 
@@ -137,8 +136,8 @@ class _PatternInputGridState extends State<PatternInputGrid> {
           ),
           boxShadow: [
             BoxShadow(
-              color: isTapped 
-                  ? colorScheme.primary.withOpacity(0.3) 
+              color: isTapped
+                  ? colorScheme.primary.withOpacity(0.3)
                   : Colors.black.withOpacity(0.05),
               blurRadius: isTapped ? 8 : 4,
               offset: const Offset(0, 2),

@@ -18,27 +18,21 @@ class FloatingCard extends StatefulWidget {
   State<FloatingCard> createState() => _FloatingCardState();
 }
 
-class _FloatingCardState extends State<FloatingCard> with SingleTickerProviderStateMixin {
+class _FloatingCardState extends State<FloatingCard>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _animation;
 
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: widget.duration,
-    )..repeat(reverse: true);
+    _controller = AnimationController(vsync: this, duration: widget.duration)
+      ..repeat(reverse: true);
 
-    _animation = Tween<double>(
-      begin: -widget.offset,
-      end: widget.offset,
-    ).animate(
-      CurvedAnimation(
-        parent: _controller,
-        curve: Curves.easeInOutSine,
-      ),
-    );
+    _animation = Tween<double>(begin: -widget.offset, end: widget.offset)
+        .animate(
+          CurvedAnimation(parent: _controller, curve: Curves.easeInOutSine),
+        );
   }
 
   @override
@@ -49,17 +43,17 @@ class _FloatingCardState extends State<FloatingCard> with SingleTickerProviderSt
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _animation,
-      builder: (context, child) {
-        return Transform.translate(
-          offset: Offset(0, _animation.value),
-          child: GestureDetector(
-            onTap: widget.onTap,
-            child: widget.child,
-          ),
-        );
-      },
+    return RepaintBoundary(
+      child: AnimatedBuilder(
+        animation: _animation,
+        builder: (context, child) {
+          return Transform.translate(
+            offset: Offset(0, _animation.value),
+            child: child,
+          );
+        },
+        child: GestureDetector(onTap: widget.onTap, child: widget.child),
+      ),
     );
   }
 }

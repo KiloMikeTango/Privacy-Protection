@@ -18,63 +18,126 @@ class PatternSequenceDisplay extends StatefulWidget {
 }
 
 class _PatternSequenceDisplayState extends State<PatternSequenceDisplay> {
-  // No longer needed for scrolling
-  // final ScrollController _scrollController = ScrollController();
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
-    // We want to center the content and allow wrapping if it exceeds width.
-    // However, with max 8 items, it should fit on most screens.
-    // If screen is very small, Wrap handles it gracefully.
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Design Goals (Senior UX):
+        // 1. Remove visual noise (arrows) to save horizontal space.
+        // 2. Maintain legibility of numbers.
+        // 3. Ensure 8 items fit on small screens without wrapping.
 
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-      alignment: Alignment.center,
-      child: Wrap(
-        alignment: WrapAlignment.center,
-        crossAxisAlignment: WrapCrossAlignment.center,
-        spacing: 8, // gap between items
-        runSpacing: 8, // gap between lines
-        children: List.generate(widget.pattern.length * 2 - 1, (index) {
-          // Interleave arrows and items
-          if (index.isOdd) {
-            return Container(
-              height: 40,
-              width: 16,
-              alignment: Alignment.center,
-              child: Icon(
-                Icons.arrow_forward_rounded,
-                size: 16,
-                color: colorScheme.onSurface.withOpacity(0.3),
-              ),
-            );
+        final availableWidth = constraints.maxWidth;
+        final itemCount = widget.pattern.length;
+
+        // Calculate optimal item size
+        // We need (itemCount * size) + ((itemCount - 1) * spacing) <= availableWidth
+        // Target size: 36.0 (nice touch target size visually)
+        // Min spacing: 4.0
+
+        double itemSize = 36.0;
+        double spacing = 8.0;
+
+        double requiredWidth =
+            (itemCount * itemSize) +
+            ((itemCount - 1 > 0 ? itemCount - 1 : 0) * spacing);
+
+        if (requiredWidth > availableWidth) {
+          // If overflow, prioritize reducing spacing first
+          spacing = 4.0;
+          requiredWidth =
+              (itemCount * itemSize) +
+              ((itemCount - 1 > 0 ? itemCount - 1 : 0) * spacing);
+
+          if (requiredWidth > availableWidth) {
+            // If still overflow, scale down items
+            // Solve for size: size * count + spacing * (count-1) = width
+            // size = (width - spacing * (count-1)) / count
+            itemSize =
+                (availableWidth - (spacing * (itemCount - 1))) / itemCount;
           }
+        }
 
-          final q = widget.pattern[index ~/ 2];
-          return Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: colorScheme.primary.withOpacity(0.1),
-              shape: BoxShape.circle,
-              border: Border.all(color: colorScheme.primary.withOpacity(0.2)),
+        // Ensure itemSize is never negative (prevents layout errors)
+        if (itemSize < 0) itemSize = 0;
+
+        return Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          alignment: Alignment.center,
+          // Wrap with FittedBox to guarantee no overflow even with rounding errors
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
+              children: List.generate(itemCount, (index) {
+                final q = widget.pattern[index];
+                final isLast = index == itemCount - 1;
+
+                // Animation key: Using index ensures existing items stay put,
+                // new items animate in.
+                return AnimatedContainer(
+                  // Use a standard curve to avoid overshooting (which causes negative blurRadius in shadows)
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.easeOut,
+                  margin: index < itemCount - 1
+                      ? EdgeInsets.only(right: spacing)
+                      : EdgeInsets.zero,
+                  width: itemSize,
+                  height: itemSize,
+                  decoration: BoxDecoration(
+                    color: isLast
+                        ? colorScheme.primary
+                        : colorScheme.primary.withOpacity(0.1),
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: isLast
+                          ? colorScheme.primary
+                          : colorScheme.primary.withOpacity(0.2),
+                      width: 1.5,
+                    ),
+                    boxShadow: isLast
+                        ? [
+                            BoxShadow(
+                              color: colorScheme.primary.withOpacity(0.3),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ]
+                        : null,
+                  ),
+                  alignment: Alignment.center,
+                  child: TweenAnimationBuilder<double>(
+                    tween: Tween(begin: 0.0, end: 1.0),
+                    duration: const Duration(milliseconds: 300),
+                    curve:
+                        Curves.easeOutBack, // Move the bouncy pop effect here
+                    builder: (context, value, child) {
+                      return Transform.scale(
+                        scale: value,
+                        child: Text(
+                          (q + 1).toString(),
+                          style: GoogleFonts.inter(
+                            fontWeight: FontWeight.bold,
+                            color: isLast
+                                ? colorScheme.onPrimary
+                                : colorScheme.primary,
+                            fontSize: itemSize * 0.5, // Responsive font scaling
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                );
+              }),
             ),
-            alignment: Alignment.center,
-            child: Text(
-              (q + 1).toString(),
-              style: GoogleFonts.inter(
-                fontWeight: FontWeight.bold,
-                color: colorScheme.primary,
-                fontSize: 18,
-              ),
-            ),
-          );
-        }),
-      ),
+          ), // Close FittedBox
+        ); // Close Container
+      },
     );
   }
 }

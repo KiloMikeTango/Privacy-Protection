@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_theme.dart';
 import '../widgets/pattern_sequence_display.dart';
+import '../widgets/pattern_overview_display.dart';
 import '../widgets/pattern_input_grid.dart';
 
 class SecretSetupScreen extends StatefulWidget {
@@ -273,7 +274,7 @@ class _SecretSetupScreenState extends State<SecretSetupScreen> {
                           ),
                         ),
                         const SizedBox(height: AppTheme.spacingMd),
-                        PatternSequenceDisplay(pattern: _existingPattern),
+                        PatternOverviewDisplay(pattern: _existingPattern),
                       ],
                     ),
                   ),
@@ -317,9 +318,9 @@ class _SecretSetupScreenState extends State<SecretSetupScreen> {
         child: SafeArea(
           child: Column(
             children: [
-              // Header similar to Android settings
+              // Header with Pattern Display integrated
               Padding(
-                padding: const EdgeInsets.fromLTRB(24, 40, 24, 20),
+                padding: const EdgeInsets.fromLTRB(24, 20, 24, 10),
                 child: Column(
                   children: [
                     Text(
@@ -341,20 +342,51 @@ class _SecretSetupScreenState extends State<SecretSetupScreen> {
                         color: colorScheme.onSurface.withOpacity(0.6),
                       ),
                     ),
+
+                    // Fixed height container for Sequence Display to prevent layout shifts
+                    Container(
+                      constraints: const BoxConstraints(minHeight: 80),
+                      child: currentList.isNotEmpty
+                          ? Center(
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 6,
+                                  horizontal: 12,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: colorScheme.surfaceVariant,
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      "SEQUENCE (${currentList.length}/8)",
+                                      style: GoogleFonts.inter(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                        color: colorScheme.secondary,
+                                        letterSpacing: 1.2,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    PatternSequenceDisplay(
+                                      pattern: currentList,
+                                      isConfirming: _isConfirming,
+                                      isMatched: _isPatternMatched,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            )
+                          : null,
+                    ),
                   ],
                 ),
               ),
 
-              // Tap Area
+              // Tap Area - Expanded to fill remaining space
               Expanded(child: PatternInputGrid(onTap: _handleGridTap)),
-
-              // Pattern Sequence Display
-              if (currentList.isNotEmpty)
-                PatternSequenceDisplay(
-                  pattern: currentList,
-                  isConfirming: _isConfirming,
-                  isMatched: _isPatternMatched,
-                ),
 
               // Bottom Action Bar
               Container(

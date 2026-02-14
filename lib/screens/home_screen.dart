@@ -161,15 +161,47 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                           ],
 
-                          const Spacer(),
-
+                          // Replace Spacer with Flexible or Expanded if needed, but since it's inside
+                          // AnimationConfiguration.toStaggeredList which returns a List<Widget>,
+                          // we need to be careful. The children list is passed to a Column.
+                          // AnimationConfiguration.toStaggeredList wraps each child in an AnimationConfiguration.
+                          // So Spacer becomes AnimationConfiguration(child: Spacer()).
+                          // Spacer is Expanded(child: SizedBox.shrink()).
+                          // Expanded must be a direct child of Column/Row/Flex.
+                          // But here it is wrapped by AnimationConfiguration -> FadeInAnimation -> SlideAnimation.
+                          // This breaks the Expanded constraint.
+                          
+                          // Fix: Use SizedBox with weight or just a big SizedBox?
+                          // Or remove Spacer and use MainAxisAlignment.spaceBetween on Column?
+                          // But the Column is inside SingleChildScrollView (not here but typically).
+                          // Here it's just a Column.
+                          // Let's replace Spacer with a large flexible gap using MainAxisAlignment
+                          // or just a transparent container that takes space if we can't use Spacer.
+                          // Better yet, remove Spacer and set mainAxisAlignment to spaceBetween on the Column
+                          // if the Column fills height.
+                          // However, we can't easily change the Column properties inside the builder without
+                          // restructuring.
+                          // EASIEST FIX: Use a large SizedBox instead of Spacer, or wrap the bottom elements 
+                          // in an Expanded if the list structure allows, but staggred list makes it hard.
+                          // Actually, we can just remove Spacer and rely on the layout or
+                          // if we really need it to push down, we can try to use a flexible container 
+                          // but the wrapper prevents it.
+                          
+                          // Correct approach for staggered list with spacer:
+                          // Don't animate the spacer.
+                          // We can split the children list.
+                          
+                          const SizedBox(height: 40), // Use fixed spacing instead of Spacer to avoid error
+                          
                           // Dashboard Grid
                           Row(
                             children: [
                               Expanded(
                                 child: FloatingCard(
-                                  duration: const Duration(seconds: 4),
-                                  offset: 6.0,
+                                  duration: const Duration(
+                                    seconds: 6,
+                                  ), // Slower
+                                  offset: 4.0, // Smaller movement
                                   onTap: () => Navigator.of(
                                     context,
                                   ).pushNamed('/protected'),
@@ -186,9 +218,9 @@ class _HomeScreenState extends State<HomeScreen> {
                               Expanded(
                                 child: FloatingCard(
                                   duration: const Duration(
-                                    seconds: 5,
-                                  ), // Different duration for organic feel
-                                  offset: -6.0, // Opposite direction
+                                    seconds: 7,
+                                  ), // Even slower, async
+                                  offset: -4.0, // Smaller movement
                                   onTap: () => Navigator.of(
                                     context,
                                   ).pushNamed('/secret_setup'),
