@@ -4,6 +4,7 @@ import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../widgets/nav_card.dart';
 import '../widgets/shield_pulse_button.dart';
+import '../widgets/floating_card.dart';
 import '../utils/responsive.dart';
 import '../theme/app_theme.dart';
 
@@ -166,28 +167,38 @@ class _HomeScreenState extends State<HomeScreen> {
                           Row(
                             children: [
                               Expanded(
-                                child: _buildDashboardCard(
-                                  context,
-                                  title: 'Apps',
-                                  subtitle: 'Manage',
-                                  icon: Icons.apps_rounded,
+                                child: FloatingCard(
+                                  duration: const Duration(seconds: 4),
+                                  offset: 6.0,
                                   onTap: () => Navigator.of(
                                     context,
                                   ).pushNamed('/protected'),
-                                  colorScheme: colorScheme,
+                                  child: _buildDashboardCard(
+                                    context,
+                                    title: 'Apps',
+                                    subtitle: 'Manage',
+                                    icon: Icons.apps_rounded,
+                                    colorScheme: colorScheme,
+                                  ),
                                 ),
                               ),
                               const SizedBox(width: AppTheme.spacingMd),
                               Expanded(
-                                child: _buildDashboardCard(
-                                  context,
-                                  title: 'Unlock',
-                                  subtitle: 'Setup',
-                                  icon: Icons.fingerprint_rounded,
+                                child: FloatingCard(
+                                  duration: const Duration(
+                                    seconds: 5,
+                                  ), // Different duration for organic feel
+                                  offset: -6.0, // Opposite direction
                                   onTap: () => Navigator.of(
                                     context,
                                   ).pushNamed('/secret_setup'),
-                                  colorScheme: colorScheme,
+                                  child: _buildDashboardCard(
+                                    context,
+                                    title: 'Unlock',
+                                    subtitle: 'Setup',
+                                    icon: Icons.fingerprint_rounded,
+                                    colorScheme: colorScheme,
+                                  ),
                                 ),
                               ),
                             ],
@@ -211,7 +222,7 @@ class _HomeScreenState extends State<HomeScreen> {
     required String title,
     required String subtitle,
     required IconData icon,
-    required VoidCallback onTap,
+    // onTap is now handled by FloatingCard
     required ColorScheme colorScheme,
   }) {
     return Container(
@@ -221,28 +232,21 @@ class _HomeScreenState extends State<HomeScreen> {
         borderRadius: BorderRadius.circular(AppTheme.radiusLg),
         border: Border.all(color: AppTheme.border),
       ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(AppTheme.radiusLg),
-          child: Padding(
-            padding: const EdgeInsets.all(AppTheme.spacingLg),
-            child: Column(
+      child: Padding(
+        padding: const EdgeInsets.all(AppTheme.spacingLg),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Icon(icon, color: AppTheme.primary, size: 28),
+            Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Icon(icon, color: AppTheme.primary, size: 28),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(title, style: AppTheme.typography.titleLarge),
-                    Text(subtitle, style: AppTheme.typography.bodyMedium),
-                  ],
-                ),
+                Text(title, style: AppTheme.typography.titleLarge),
+                Text(subtitle, style: AppTheme.typography.bodyMedium),
               ],
             ),
-          ),
+          ],
         ),
       ),
     );
