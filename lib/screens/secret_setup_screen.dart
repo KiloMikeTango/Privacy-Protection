@@ -136,7 +136,10 @@ class _SecretSetupScreenState extends State<SecretSetupScreen> {
         final bool forceSetup = args?['forceSetup'] ?? false;
 
         if (forceSetup) {
-          Navigator.of(context).pushReplacementNamed('/home');
+          Navigator.of(context).pushReplacementNamed(
+            '/permissions',
+            arguments: {'forceSetup': true},
+          );
         } else {
           Navigator.pop(context);
         }

@@ -3,6 +3,7 @@ import 'screens/home_screen.dart';
 import 'screens/protected_apps_screen.dart';
 import 'screens/secret_setup_screen.dart';
 import 'screens/splash_screen.dart';
+import 'screens/permission_screen.dart';
 import 'theme/app_theme.dart';
 
 void main() {
@@ -23,6 +24,7 @@ class PrivacyProtectionApp extends StatelessWidget {
         '/home': (_) => const HomeScreen(),
         '/protected': (_) => const ProtectedAppsScreen(),
         '/secret_setup': (_) => const SecretSetupScreen(),
+        '/permissions': (_) => const PermissionScreen(),
       },
       initialRoute: '/',
     );

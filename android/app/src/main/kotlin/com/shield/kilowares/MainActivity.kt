@@ -90,6 +90,21 @@ class MainActivity : FlutterActivity() {
                     }
                     result.success(list)
                 }
+                "checkPermissions" -> {
+                    val overlay = Settings.canDrawOverlays(this)
+                    val usage = hasUsageAccess()
+                    val notification = if (Build.VERSION.SDK_INT >= 33) {
+                        checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+                    } else {
+                        true
+                    }
+                    val map = mapOf(
+                        "overlay" to overlay,
+                        "usage" to usage,
+                        "notification" to notification
+                    )
+                    result.success(map)
+                }
                 "saveProtectedApps" -> {
                     val packages = (call.arguments as? List<*>)?.map { it.toString() } ?: emptyList()
                     val prefs = securePrefs()
