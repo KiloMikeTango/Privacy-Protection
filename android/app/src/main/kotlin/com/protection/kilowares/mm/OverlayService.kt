@@ -28,6 +28,7 @@ class OverlayService : Service() {
     companion object {
         const val CHANNEL_ID = "privacy_protection_overlay"
         const val NOTIFICATION_ID = 1001
+        const val ACTION_UPDATE_CONFIG = "com.protection.kilowares.UPDATE_CONFIG"
         @Volatile
         var isOverlayShowing: Boolean = false
         @Volatile
@@ -47,7 +48,7 @@ class OverlayService : Service() {
     private val keySecretPattern = "secret_tap_pattern"
     private var secretPattern: List<Int> = listOf(0, 1, 2, 3)
     private val currentTapSequence = mutableListOf<Int>()
-    private var tempUnlockUntil: Long = 0
+    private var unlockedPackage: String? = null
     
     private val screenReceiver = object : android.content.BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -55,19 +56,23 @@ class OverlayService : Service() {
                 Intent.ACTION_SCREEN_OFF -> {
                     stopMonitoring()
                     currentTapSequence.clear()
-                    tempUnlockUntil = 0 // Reset unlock on screen off
+                    unlockedPackage = null // Relock immediately on screen off
                 }
                 Intent.ACTION_SCREEN_ON -> startMonitoring()
+                ACTION_UPDATE_CONFIG -> reloadConfig()
             }
         }
     }
 
-    private val prefListener = SharedPreferences.OnSharedPreferenceChangeListener { sharedPreferences, key ->
-        if (key == keyProtected) {
-            protectedPackages = sharedPreferences.getStringSet(keyProtected, emptySet()) ?: emptySet()
-        } else if (key == keySecretPattern) {
-            secretPattern = loadSecretPattern()
+    private val prefListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+        if (key == keyProtected || key == keySecretPattern) {
+            reloadConfig()
         }
+    }
+
+    private fun reloadConfig() {
+        protectedPackages = prefs.getStringSet(keyProtected, emptySet()) ?: emptySet()
+        secretPattern = loadSecretPattern()
     }
 
     override fun onCreate() {
@@ -78,15 +83,19 @@ class OverlayService : Service() {
         isServiceActive = true
         prefs = securePrefs()
         prefs.registerOnSharedPreferenceChangeListener(prefListener)
-        protectedPackages = prefs.getStringSet(keyProtected, emptySet()) ?: emptySet()
-        secretPattern = loadSecretPattern()
+        reloadConfig()
         launcherPackages = queryLauncherPackages()
         
         val filter = android.content.IntentFilter().apply {
             addAction(Intent.ACTION_SCREEN_OFF)
             addAction(Intent.ACTION_SCREEN_ON)
+            addAction(ACTION_UPDATE_CONFIG)
         }
-        registerReceiver(screenReceiver, filter)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(screenReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
+        } else {
+            registerReceiver(screenReceiver, filter)
+        }
         
         startMonitoring()
     }
@@ -136,22 +145,34 @@ class OverlayService : Service() {
         if (monitorRunnable != null) return
         monitorRunnable = Runnable {
             try {
-                if (System.currentTimeMillis() < tempUnlockUntil) {
-                    // Temporarily unlocked
-                    return@Runnable
-                }
-                
                 val newTop = getTopPackage()
                 if (newTop != null) {
                     lastTopPackage = newTop
+                } else if (lastTopPackage == null) {
+                    // Fallback: If no events in last 60s (e.g. service restart), check daily stats
+                    lastTopPackage = getTopPackageFromUsageStats()
                 }
+                
                 val top = lastTopPackage
+                
+                // If we are currently in the unlocked package, stay unlocked
+                if (top != null && top == unlockedPackage) {
+                    hideOverlay()
+                    return@Runnable
+                }
+                
+                // If we switched to a different package, relock the previous one
+                if (top != null && top != unlockedPackage) {
+                    unlockedPackage = null
+                }
+                
                 // Use cached protectedPackages
+                // Removed isClickableApp check to ensure all selected apps are protected
                 val shouldShow = top != null &&
                         top != packageName &&
-                        isClickableApp(top) &&
                         !launcherPackages.contains(top) &&
                         protectedPackages.contains(top)
+                        
                 if (shouldShow) {
                     showOverlay()
                 } else if (top != null) {
@@ -160,7 +181,8 @@ class OverlayService : Service() {
             } catch (_: Exception) {
                 // Ignore for PoC
             } finally {
-                handler.postDelayed(monitorRunnable!!, 500)
+                // Faster polling for better responsiveness
+                handler.postDelayed(monitorRunnable!!, 100)
             }
         }
         handler.post(monitorRunnable!!)
@@ -171,19 +193,35 @@ class OverlayService : Service() {
         monitorRunnable = null
     }
 
+    private fun getTopPackageFromUsageStats(): String? {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            val usm = getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
+            val end = System.currentTimeMillis()
+            val begin = end - 1000 * 60 * 60 * 24 // 24 hours
+            val stats = usm.queryUsageStats(UsageStatsManager.INTERVAL_DAILY, begin, end)
+            if (stats != null && stats.isNotEmpty()) {
+                val sorted = stats.sortedByDescending { it.lastTimeUsed }
+                return sorted.firstOrNull()?.packageName
+            }
+        }
+        return null
+    }
+
     private fun getTopPackage(): String? {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             val usm = getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
             val end = System.currentTimeMillis()
-            val begin = end - 60_000
+            val begin = end - 10_000 // Shortened window for performance
             val events = usm.queryEvents(begin, end)
             var lastPkg: String? = null
+            var lastTime: Long = 0
             val event = UsageEvents.Event()
             while (events.hasNextEvent()) {
                 events.getNextEvent(event)
-                if (event.eventType == UsageEvents.Event.MOVE_TO_FOREGROUND ||
-                    event.eventType == UsageEvents.Event.ACTIVITY_RESUMED) {
+                if ((event.eventType == UsageEvents.Event.MOVE_TO_FOREGROUND ||
+                    event.eventType == UsageEvents.Event.ACTIVITY_RESUMED) && event.timeStamp >= lastTime) {
                     lastPkg = event.packageName
+                    lastTime = event.timeStamp
                 }
             }
             return lastPkg
@@ -254,7 +292,8 @@ class OverlayService : Service() {
     }
     
     private fun performTempUnlock() {
-        tempUnlockUntil = System.currentTimeMillis() + 60_000 // 1 minute unlock
+        // Unlock only the current app
+        unlockedPackage = lastTopPackage
         hideOverlay()
     }
 

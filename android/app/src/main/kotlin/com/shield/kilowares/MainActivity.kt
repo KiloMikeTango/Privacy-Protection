@@ -109,6 +109,8 @@ class MainActivity : FlutterActivity() {
                     val packages = (call.arguments as? List<*>)?.map { it.toString() } ?: emptyList()
                     val prefs = securePrefs()
                     prefs.edit().putStringSet(keyProtected, packages.toSet()).apply()
+                    // Notify service to reload
+                    sendBroadcast(Intent(OverlayService.ACTION_UPDATE_CONFIG))
                     result.success(true)
                 }
                 "getProtectedApps" -> {
@@ -121,6 +123,8 @@ class MainActivity : FlutterActivity() {
                     val s = pattern.joinToString(",")
                     val prefs = securePrefs()
                     prefs.edit().putString(keySecretPattern, s).apply()
+                    // Notify service to reload
+                    sendBroadcast(Intent(OverlayService.ACTION_UPDATE_CONFIG))
                     result.success(true)
                 }
                 "getSecretPattern" -> {
