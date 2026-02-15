@@ -266,20 +266,10 @@ class OverlayService : Service() {
         params.gravity = Gravity.TOP or Gravity.START
 
         val view = FrameLayout(this).apply {
-            setBackgroundColor(Color.parseColor("#F5F7FA")) // Match app theme background
+            // Stealth Mode: Use a solid color to mimic a frozen or blank screen
+            // Using a slightly off-white (#F5F7FA) makes it look like the app tried to load but failed
+            setBackgroundColor(Color.parseColor("#F5F7FA"))
             
-            // Add Shield Icon
-            val iconSize = (56 * resources.displayMetrics.density).toInt()
-            val icon = android.widget.ImageView(context).apply {
-                setImageResource(android.R.drawable.ic_lock_lock)
-                setColorFilter(Color.parseColor("#2563EB")) // Primary Blue
-                layoutParams = FrameLayout.LayoutParams(iconSize, iconSize).apply {
-                    gravity = Gravity.CENTER
-                    bottomMargin = (100 * resources.displayMetrics.density).toInt() // Push up slightly
-                }
-            }
-            addView(icon)
-
             // Invisible touch area for pattern input
             setOnTouchListener { v, event ->
                 if (event.action == MotionEvent.ACTION_DOWN) {

@@ -27,6 +27,6 @@ class PrivacyProtectionApp extends StatelessWidget {
         '/permissions': (_) => const PermissionScreen(),
       },
       initialRoute: '/',
-    );
+   );
   }
 }
