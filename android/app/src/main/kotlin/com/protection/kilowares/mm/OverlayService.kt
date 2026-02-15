@@ -145,47 +145,51 @@ class OverlayService : Service() {
         if (monitorRunnable != null) return
         monitorRunnable = Runnable {
             try {
-                val newTop = getTopPackage()
-                if (newTop != null) {
-                    lastTopPackage = newTop
-                } else if (lastTopPackage == null) {
-                    // Fallback: If no events in last 60s (e.g. service restart), check daily stats
-                    lastTopPackage = getTopPackageFromUsageStats()
-                }
-                
-                val top = lastTopPackage
-                
-                // If we are currently in the unlocked package, stay unlocked
-                if (top != null && top == unlockedPackage) {
-                    hideOverlay()
-                    return@Runnable
-                }
-                
-                // If we switched to a different package, relock the previous one
-                if (top != null && top != unlockedPackage) {
-                    unlockedPackage = null
-                }
-                
-                // Use cached protectedPackages
-                // Removed isClickableApp check to ensure all selected apps are protected
-                val shouldShow = top != null &&
-                        top != packageName &&
-                        !launcherPackages.contains(top) &&
-                        protectedPackages.contains(top)
-                        
-                if (shouldShow) {
-                    showOverlay()
-                } else if (top != null) {
-                    hideOverlay()
-                }
+                checkForegroundApp()
             } catch (_: Exception) {
-                // Ignore for PoC
+                // Ignore errors to prevent crash loop
             } finally {
-                // Faster polling for better responsiveness
                 handler.postDelayed(monitorRunnable!!, 100)
             }
         }
         handler.post(monitorRunnable!!)
+    }
+
+    private fun checkForegroundApp() {
+        val newTop = getTopPackage()
+        if (newTop != null) {
+            lastTopPackage = newTop
+        } else if (lastTopPackage == null) {
+            lastTopPackage = getTopPackageFromUsageStats()
+        }
+        
+        val top = lastTopPackage
+        
+        // Logic:
+        // 1. If we are in the unlocked app -> Stay unlocked (Hide overlay)
+        // 2. If we switched apps -> Reset unlock status
+        // 3. If new app is protected -> Show overlay
+        // 4. Otherwise -> Hide overlay
+
+        if (top != null) {
+            if (top == unlockedPackage) {
+                // Currently using the unlocked app
+                hideOverlay()
+                return
+            } else {
+                // Switched to a different app (or launcher), so re-lock
+                unlockedPackage = null
+            }
+            
+            // Check protection status
+            if (top != packageName && 
+                !launcherPackages.contains(top) && 
+                protectedPackages.contains(top)) {
+                showOverlay()
+            } else {
+                hideOverlay()
+            }
+        }
     }
 
     private fun stopMonitoring() {
@@ -255,13 +259,28 @@ class OverlayService : Service() {
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
                     WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
                     WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or
-                    WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
+                    WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
+                    WindowManager.LayoutParams.FLAG_SECURE, // Prevent screenshots/recording
             android.graphics.PixelFormat.TRANSLUCENT
         )
         params.gravity = Gravity.TOP or Gravity.START
 
         val view = FrameLayout(this).apply {
-            setBackgroundColor(Color.parseColor("#FFFFFF"))
+            setBackgroundColor(Color.parseColor("#F5F7FA")) // Match app theme background
+            
+            // Add Shield Icon
+            val iconSize = (56 * resources.displayMetrics.density).toInt()
+            val icon = android.widget.ImageView(context).apply {
+                setImageResource(android.R.drawable.ic_lock_lock)
+                setColorFilter(Color.parseColor("#2563EB")) // Primary Blue
+                layoutParams = FrameLayout.LayoutParams(iconSize, iconSize).apply {
+                    gravity = Gravity.CENTER
+                    bottomMargin = (100 * resources.displayMetrics.density).toInt() // Push up slightly
+                }
+            }
+            addView(icon)
+
+            // Invisible touch area for pattern input
             setOnTouchListener { v, event ->
                 if (event.action == MotionEvent.ACTION_DOWN) {
                     val w = v.width
