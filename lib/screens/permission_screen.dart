@@ -111,7 +111,7 @@ class _PermissionScreenState extends State<PermissionScreen>
         backgroundColor: colorScheme.background,
         appBar: AppBar(
           title: Text(
-            'Permissions',
+            '',
             style: GoogleFonts.inter(fontWeight: FontWeight.bold),
           ),
           automaticallyImplyLeading: !forceSetup,
