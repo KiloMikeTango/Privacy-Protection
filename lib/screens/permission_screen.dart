@@ -10,12 +10,12 @@ class PermissionScreen extends StatefulWidget {
   State<PermissionScreen> createState() => _PermissionScreenState();
 }
 
-class _PermissionScreenState extends State<PermissionScreen> with WidgetsBindingObserver {
+class _PermissionScreenState extends State<PermissionScreen>
+    with WidgetsBindingObserver {
   static const MethodChannel _channel = MethodChannel('privacy_protection');
-  
+
   bool _overlayGranted = false;
   bool _usageGranted = false;
-  bool _notificationGranted = false;
   bool _checking = true;
 
   @override
@@ -40,12 +40,13 @@ class _PermissionScreenState extends State<PermissionScreen> with WidgetsBinding
 
   Future<void> _checkPermissions() async {
     try {
-      final Map<dynamic, dynamic>? result = await _channel.invokeMethod('checkPermissions');
-      if (result != null) {
+      final Map<dynamic, dynamic>? result = await _channel.invokeMethod(
+        'checkPermissions',
+      );
+      if (result != null && mounted) {
         setState(() {
           _overlayGranted = result['overlay'] ?? false;
           _usageGranted = result['usage'] ?? false;
-          _notificationGranted = result['notification'] ?? true;
           _checking = false;
         });
       }
@@ -67,8 +68,8 @@ class _PermissionScreenState extends State<PermissionScreen> with WidgetsBinding
 
   Future<void> _requestUsage() async {
     try {
-      // Logic in MainActivity handles this if we call enableOverlay, 
-      // but maybe we should expose direct calls? 
+      // Logic in MainActivity handles this if we call enableOverlay,
+      // but maybe we should expose direct calls?
       // Current implementation of 'enableOverlay' checks overlay first, then usage.
       // So calling 'enableOverlay' works for both sequentially.
       // But for better UX, we might want to target specific settings.
@@ -90,17 +91,19 @@ class _PermissionScreenState extends State<PermissionScreen> with WidgetsBinding
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    
-    final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+
+    final args =
+        ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
     final bool forceSetup = args?['forceSetup'] ?? false;
 
-    final bool allGranted = _overlayGranted && _usageGranted; // Notification optional?
-    
+    final bool allGranted =
+        _overlayGranted && _usageGranted; // Notification not needed
+
     return WillPopScope(
       onWillPop: () async {
         if (forceSetup) {
-           SystemNavigator.pop();
-           return false;
+          SystemNavigator.pop();
+          return false;
         }
         return true;
       },
@@ -114,104 +117,94 @@ class _PermissionScreenState extends State<PermissionScreen> with WidgetsBinding
           automaticallyImplyLeading: !forceSetup,
         ),
         body: SafeArea(
-          child: _checking 
-            ? const Center(child: CircularProgressIndicator())
-            : Column(
-              children: [
-                Expanded(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          "Required Permissions",
-                          style: GoogleFonts.inter(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                            color: colorScheme.onSurface,
-                          ),
+          child: _checking
+              ? const Center(child: CircularProgressIndicator())
+              : Column(
+                  children: [
+                    Expanded(
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.all(24),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              "Required Permissions",
+                              style: GoogleFonts.inter(
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                                color: colorScheme.onSurface,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              "To protect your apps, Shield needs the following permissions to run in the background and display over other apps.",
+                              style: GoogleFonts.inter(
+                                fontSize: 16,
+                                color: colorScheme.onSurface.withOpacity(0.7),
+                                height: 1.5,
+                              ),
+                            ),
+                            const SizedBox(height: 32),
+
+                            _buildPermissionItem(
+                              context,
+                              title: "Display over other apps",
+                              description:
+                                  "Required to show the lock screen over protected apps.",
+                              icon: Icons.layers_outlined,
+                              isGranted: _overlayGranted,
+                              onTap: _overlayGranted ? null : _requestOverlay,
+                            ),
+
+                            const SizedBox(height: 16),
+
+                            _buildPermissionItem(
+                              context,
+                              title: "Usage Access",
+                              description:
+                                  "Required to detect when you open a protected app.",
+                              icon: Icons.data_usage_outlined,
+                              isGranted: _usageGranted,
+                              onTap: _usageGranted ? null : _requestUsage,
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: 8),
-                        Text(
-                          "To protect your apps, Shield needs the following permissions to run in the background and display over other apps.",
-                          style: GoogleFonts.inter(
-                            fontSize: 16,
-                            color: colorScheme.onSurface.withOpacity(0.7),
-                            height: 1.5,
-                          ),
-                        ),
-                        const SizedBox(height: 32),
-                        
-                        _buildPermissionItem(
-                          context,
-                          title: "Display over other apps",
-                          description: "Required to show the lock screen over protected apps.",
-                          icon: Icons.layers_outlined,
-                          isGranted: _overlayGranted,
-                          onTap: _overlayGranted ? null : _requestOverlay,
-                        ),
-                        
-                        const SizedBox(height: 16),
-                        
-                        _buildPermissionItem(
-                          context,
-                          title: "Usage Access",
-                          description: "Required to detect when you open a protected app.",
-                          icon: Icons.data_usage_outlined,
-                          isGranted: _usageGranted,
-                          onTap: _usageGranted ? null : _requestUsage,
-                        ),
-                        
-                        if (!_notificationGranted) ...[
-                          const SizedBox(height: 16),
-                          _buildPermissionItem(
-                            context,
-                            title: "Notifications",
-                            description: "Required to keep the protection service running.",
-                            icon: Icons.notifications_outlined,
-                            isGranted: _notificationGranted,
-                            onTap: _requestOverlay, // enableOverlay handles this too
+                      ),
+                    ),
+
+                    Container(
+                      padding: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        color: colorScheme.surface,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.05),
+                            blurRadius: 10,
+                            offset: const Offset(0, -4),
                           ),
                         ],
-                      ],
-                    ),
-                  ),
-                ),
-                
-                Container(
-                  padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                    color: colorScheme.surface,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
-                        blurRadius: 10,
-                        offset: const Offset(0, -4),
                       ),
-                    ],
-                  ),
-                  child: SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: allGranted ? _continue : null,
-                      style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        backgroundColor: colorScheme.primary,
-                        foregroundColor: Colors.white,
-                      ),
-                      child: Text(
-                        "Continue",
-                        style: GoogleFonts.inter(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
+                      child: SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: allGranted ? _continue : null,
+                          style: ElevatedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            backgroundColor: colorScheme.primary,
+                            foregroundColor: Colors.white,
+                          ),
+                          child: Text(
+                            "Continue",
+                            style: GoogleFonts.inter(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                         ),
                       ),
                     ),
-                  ),
+                  ],
                 ),
-              ],
-            ),
         ),
       ),
     );
@@ -226,13 +219,15 @@ class _PermissionScreenState extends State<PermissionScreen> with WidgetsBinding
     VoidCallback? onTap,
   }) {
     final colorScheme = Theme.of(context).colorScheme;
-    
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: isGranted ? AppTheme.success.withOpacity(0.3) : AppTheme.border,
+          color: isGranted
+              ? AppTheme.success.withOpacity(0.3)
+              : AppTheme.border,
           width: isGranted ? 1.5 : 1,
         ),
         boxShadow: [
@@ -255,8 +250,8 @@ class _PermissionScreenState extends State<PermissionScreen> with WidgetsBinding
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: isGranted 
-                        ? AppTheme.success.withOpacity(0.1) 
+                    color: isGranted
+                        ? AppTheme.success.withOpacity(0.1)
                         : colorScheme.primary.withOpacity(0.1),
                     shape: BoxShape.circle,
                   ),
@@ -298,7 +293,10 @@ class _PermissionScreenState extends State<PermissionScreen> with WidgetsBinding
                   )
                 else
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
                     decoration: BoxDecoration(
                       color: colorScheme.primary,
                       borderRadius: BorderRadius.circular(20),

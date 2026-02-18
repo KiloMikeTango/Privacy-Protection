@@ -50,7 +50,7 @@ class _HomeScreenState extends State<HomeScreen> {
         if (!ok) {
           setState(() {
             _message =
-                'Grant “Draw over other apps”, “Usage Access”, and notifications (Android 13+).';
+                'Grant “Draw over other apps” and “Usage Access” to enable protection.';
           });
         }
       } else {
