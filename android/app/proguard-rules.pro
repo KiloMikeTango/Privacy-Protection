@@ -1,6 +1,7 @@
  -keep class io.flutter.** { *; }
 -keep class com.shield.kilowares.MainActivity { *; }
 -keep class com.protection.kilowares.mm.OverlayService { *; }
+-keep class com.protection.kilowares.mm.ForegroundDetectorService { *; }
 
 -keep class androidx.security.crypto.** { *; }
 -keep class com.google.crypto.tink.** { *; }

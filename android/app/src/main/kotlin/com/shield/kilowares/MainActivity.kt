@@ -68,6 +68,14 @@ class MainActivity : FlutterActivity() {
                     startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
                     result.success(true)
                 }
+                "openAppDetails" -> {
+                    val intent = Intent(
+                        Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                        Uri.parse("package:$packageName")
+                    )
+                    startActivity(intent)
+                    result.success(true)
+                }
                 "disableOverlay" -> {
                     val serviceIntent = Intent(this, OverlayService::class.java)
                     stopService(serviceIntent)
