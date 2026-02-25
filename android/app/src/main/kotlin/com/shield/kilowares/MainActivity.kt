@@ -15,12 +15,17 @@ import android.graphics.Canvas
 import java.io.ByteArrayOutputStream
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKeys
+import android.util.Log
+import android.view.accessibility.AccessibilityManager
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 import com.protection.kilowares.mm.OverlayService
 
 class MainActivity : FlutterActivity() {
+    companion object {
+        const val TAG = "MainActivity"
+    }
     private val channelName = "privacy_protection"
     private val prefsName = "privacy_protection_prefs"
     private val keyProtected = "protected_packages"
@@ -29,6 +34,7 @@ class MainActivity : FlutterActivity() {
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, channelName).setMethodCallHandler { call, result ->
+            Log.d(TAG, "Method called: ${call.method}")
             when (call.method) {
                 "enableOverlay" -> {
                     if (!Settings.canDrawOverlays(this)) {
@@ -36,9 +42,13 @@ class MainActivity : FlutterActivity() {
                         startActivity(intent)
                         result.success(false)
                     } else {
-                        // Removed POST_NOTIFICATIONS check to prevent user prompt
-                        // On Android 13+, if permission is not granted, the notification is suppressed automatically
-                        // but the service still runs in foreground. This achieves the "stealth" effect.
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                            if (checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                                requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 1001)
+                                result.success(false)
+                                return@setMethodCallHandler
+                            }
+                        }
                         
                         if (!hasUsageAccess()) {
                             startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
@@ -53,6 +63,10 @@ class MainActivity : FlutterActivity() {
                         }
                         result.success(true)
                     }
+                }
+                "openAccessibilitySettings" -> {
+                    startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+                    result.success(true)
                 }
                 "disableOverlay" -> {
                     val serviceIntent = Intent(this, OverlayService::class.java)
@@ -89,11 +103,17 @@ class MainActivity : FlutterActivity() {
                 "checkPermissions" -> {
                     val overlay = Settings.canDrawOverlays(this)
                     val usage = hasUsageAccess()
-                    val notification = true // No longer needed
+                    val notification = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+                    } else {
+                        true
+                    }
+                    val accessibility = isAccessibilityEnabled()
                     val map = mapOf(
                         "overlay" to overlay,
                         "usage" to usage,
-                        "notification" to notification
+                        "notification" to notification,
+                        "accessibility" to accessibility
                     )
                     result.success(map)
                 }
@@ -138,6 +158,15 @@ class MainActivity : FlutterActivity() {
             packageName
         )
         return mode == AppOpsManager.MODE_ALLOWED
+    }
+
+    private fun isAccessibilityEnabled(): Boolean {
+        val am = getSystemService(Context.ACCESSIBILITY_SERVICE) as AccessibilityManager
+        val enabled = am.isEnabled
+        if (!enabled) return false
+        val enabledServices = Settings.Secure.getString(contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES) ?: ""
+        val target = "$packageName/com.protection.kilowares.mm.ForegroundDetectorService"
+        return enabledServices.contains(target)
     }
 
     private fun securePrefs(): SharedPreferences {

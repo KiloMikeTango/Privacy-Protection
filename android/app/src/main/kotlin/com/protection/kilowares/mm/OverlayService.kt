@@ -5,10 +5,13 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
+import android.app.AppOpsManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.content.pm.ServiceInfo
 import android.content.SharedPreferences
+import android.util.Log
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKeys
 import android.graphics.Color
@@ -26,9 +29,11 @@ import android.widget.FrameLayout
 
 class OverlayService : Service() {
     companion object {
+        const val TAG = "OverlayService"
         const val CHANNEL_ID = "privacy_protection_overlay"
         const val NOTIFICATION_ID = 1001
         const val ACTION_UPDATE_CONFIG = "com.protection.kilowares.UPDATE_CONFIG"
+        const val ACTION_TOP_CHANGED = "com.protection.kilowares.TOP_CHANGED"
         @Volatile
         var isOverlayShowing: Boolean = false
         @Volatile
@@ -60,6 +65,10 @@ class OverlayService : Service() {
                 }
                 Intent.ACTION_SCREEN_ON -> startMonitoring()
                 ACTION_UPDATE_CONFIG -> reloadConfig()
+                ACTION_TOP_CHANGED -> {
+                    val pkg = intent.getStringExtra("package")
+                    onTopPackageChanged(pkg)
+                }
             }
         }
     }
@@ -73,12 +82,52 @@ class OverlayService : Service() {
     private fun reloadConfig() {
         protectedPackages = prefs.getStringSet(keyProtected, emptySet()) ?: emptySet()
         secretPattern = loadSecretPattern()
+        Log.d(TAG, "Config reloaded. Protected packages count: ${protectedPackages.size}")
+        Log.d(TAG, "Protected packages: $protectedPackages")
+        
+        // Ensure monitoring is active after config reload
+        startMonitoring()
+    }
+
+    private fun onTopPackageChanged(pkg: String?) {
+        Log.d(TAG, "Top via accessibility: $pkg")
+        lastTopPackage = pkg
+        val top = lastTopPackage
+        if (top != null) {
+            if (top == unlockedPackage) {
+                hideOverlay()
+                return
+            } else {
+                unlockedPackage = null
+            }
+            if (top != packageName &&
+                !launcherPackages.contains(top) &&
+                protectedPackages.contains(top)) {
+                showOverlay()
+            } else {
+                hideOverlay()
+            }
+        }
     }
 
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
-        startForeground(NOTIFICATION_ID, buildNotification())
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                startForeground(
+                    NOTIFICATION_ID,
+                    buildNotification(),
+                    ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
+                )
+            } else {
+                startForeground(NOTIFICATION_ID, buildNotification())
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "startForeground failed", e)
+            stopSelf()
+            return
+        }
         wm = getSystemService(Context.WINDOW_SERVICE) as WindowManager
         isServiceActive = true
         prefs = securePrefs()
@@ -90,6 +139,7 @@ class OverlayService : Service() {
             addAction(Intent.ACTION_SCREEN_OFF)
             addAction(Intent.ACTION_SCREEN_ON)
             addAction(ACTION_UPDATE_CONFIG)
+            addAction(ACTION_TOP_CHANGED)
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             registerReceiver(screenReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
@@ -107,6 +157,7 @@ class OverlayService : Service() {
     }
 
     private fun securePrefs(): SharedPreferences {
+        // Fallback to regular SharedPreferences if EncryptedSharedPreferences fails (e.g. due to ProGuard or key issues)
         return try {
             val keyAlias = MasterKeys.getOrCreate(MasterKeys.AES256_GCM_SPEC)
             EncryptedSharedPreferences.create(
@@ -142,12 +193,17 @@ class OverlayService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     private fun startMonitoring() {
-        if (monitorRunnable != null) return
+        if (monitorRunnable != null) {
+            Log.d(TAG, "Monitoring already active")
+            return
+        }
+        Log.d(TAG, "Starting monitoring loop")
         monitorRunnable = Runnable {
             try {
+                Log.d(TAG, "Monitoring tick")
                 checkForegroundApp()
-            } catch (_: Exception) {
-                // Ignore errors to prevent crash loop
+            } catch (e: Exception) {
+                Log.e(TAG, "Error in monitoring loop", e)
             } finally {
                 handler.postDelayed(monitorRunnable!!, 100)
             }
@@ -156,14 +212,26 @@ class OverlayService : Service() {
     }
 
     private fun checkForegroundApp() {
-        val newTop = getTopPackage()
+        val usageAllowed = hasUsageAccess()
+        if (!usageAllowed) {
+            Log.e(TAG, "Usage Access not granted; cannot detect foreground app")
+        }
+        var newTop = getTopPackage()
+        
+        // If queryEvents failed to return a package (e.g. long duration), try fallback immediately
+        if (newTop == null) {
+            newTop = getTopPackageFromUsageStats()
+        }
+
         if (newTop != null) {
             lastTopPackage = newTop
         } else if (lastTopPackage == null) {
-            lastTopPackage = getTopPackageFromUsageStats()
+             // If everything failed, try one last resort: standard UsageStats
+             lastTopPackage = getTopPackageFromUsageStats()
         }
         
         val top = lastTopPackage
+        Log.d(TAG, "Current top package: $top")
         
         // Logic:
         // 1. If we are in the unlocked app -> Stay unlocked (Hide overlay)
@@ -172,6 +240,8 @@ class OverlayService : Service() {
         // 4. Otherwise -> Hide overlay
 
         if (top != null) {
+            // Log.d(TAG, "Checking package: $top. Is protected: ${protectedPackages.contains(top)}")
+            
             if (top == unlockedPackage) {
                 // Currently using the unlocked app
                 hideOverlay()
@@ -185,10 +255,14 @@ class OverlayService : Service() {
             if (top != packageName && 
                 !launcherPackages.contains(top) && 
                 protectedPackages.contains(top)) {
+                Log.d(TAG, "Protected app detected: $top. Showing overlay.")
                 showOverlay()
             } else {
+                Log.d(TAG, "Top app not protected or is launcher/self: $top")
                 hideOverlay()
             }
+        } else {
+            Log.d(TAG, "No top package detected.")
         }
     }
 
@@ -215,7 +289,8 @@ class OverlayService : Service() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             val usm = getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
             val end = System.currentTimeMillis()
-            val begin = end - 10_000 // Shortened window for performance
+            // Look back 15 minutes to catch recent app switches; still inexpensive
+            val begin = end - 1000 * 60 * 15 
             val events = usm.queryEvents(begin, end)
             var lastPkg: String? = null
             var lastTime: Long = 0
@@ -228,9 +303,24 @@ class OverlayService : Service() {
                     lastTime = event.timeStamp
                 }
             }
+            if (lastPkg == null) {
+                // Fallback to UsageStats if no event is found in the short window
+                // This is useful if the user has been in the same app for a long time
+                return getTopPackageFromUsageStats()
+            }
             return lastPkg
         }
         return null
+    }
+
+    private fun hasUsageAccess(): Boolean {
+        val appOps = getSystemService(Context.APP_OPS_SERVICE) as AppOpsManager
+        val mode = appOps.checkOpNoThrow(
+            AppOpsManager.OPSTR_GET_USAGE_STATS,
+            android.os.Process.myUid(),
+            packageName
+        )
+        return mode == AppOpsManager.MODE_ALLOWED
     }
 
     private fun isClickableApp(pkg: String): Boolean {
@@ -249,6 +339,14 @@ class OverlayService : Service() {
 
     private fun showOverlay() {
         if (isOverlayShowing) return
+        Log.d(TAG, "showOverlay called")
+        
+        // Check if we have permission to draw overlays
+        if (!android.provider.Settings.canDrawOverlays(this)) {
+            Log.e(TAG, "Overlay permission not granted, cannot show overlay")
+            return
+        }
+
         val params = WindowManager.LayoutParams(
             WindowManager.LayoutParams.MATCH_PARENT,
             WindowManager.LayoutParams.MATCH_PARENT,
@@ -265,39 +363,50 @@ class OverlayService : Service() {
         )
         params.gravity = Gravity.TOP or Gravity.START
 
-        val view = FrameLayout(this).apply {
-            // Stealth Mode: Use a solid color to mimic a frozen or blank screen
-            // Using a slightly off-white (#F5F7FA) makes it look like the app tried to load but failed
-            setBackgroundColor(Color.parseColor("#F5F7FA"))
-            
-            // Invisible touch area for pattern input
-            setOnTouchListener { v, event ->
-                if (event.action == MotionEvent.ACTION_DOWN) {
-                    val w = v.width
-                    val h = v.height
-                    val x = event.x
-                    val y = event.y
-                    val col = if (x < w / 2) 0 else 1
-                    val row = if (y < h / 2) 0 else 1
-                    val quadrant = row * 2 + col // 0=TL, 1=TR, 2=BL, 3=BR
-                    
-                    currentTapSequence.add(quadrant)
-                    while (currentTapSequence.size > secretPattern.size) {
-                        currentTapSequence.removeAt(0)
+        // Ensure we're running on the main thread for UI operations
+        handler.post {
+            try {
+                if (overlayView == null) {
+                    val view = FrameLayout(this).apply {
+                        // Stealth Mode: Use a solid color to mimic a frozen or blank screen
+                        // Using a slightly off-white (#F5F7FA) makes it look like the app tried to load but failed
+                        setBackgroundColor(Color.parseColor("#F5F7FA"))
+                        
+                        // Invisible touch area for pattern input
+                        setOnTouchListener { v, event ->
+                            if (event.action == MotionEvent.ACTION_DOWN) {
+                                val w = v.width
+                                val h = v.height
+                                val x = event.x
+                                val y = event.y
+                                val col = if (x < w / 2) 0 else 1
+                                val row = if (y < h / 2) 0 else 1
+                                val quadrant = row * 2 + col // 0=TL, 1=TR, 2=BL, 3=BR
+                                
+                                currentTapSequence.add(quadrant)
+                                while (currentTapSequence.size > secretPattern.size) {
+                                    currentTapSequence.removeAt(0)
+                                }
+                                
+                                if (currentTapSequence == secretPattern) {
+                                    performTempUnlock()
+                                    currentTapSequence.clear()
+                                }
+                            }
+                            true
+                        }
                     }
-                    
-                    if (currentTapSequence == secretPattern) {
-                        performTempUnlock()
-                        currentTapSequence.clear()
-                    }
+                    overlayView = view
+                    wm?.addView(view, params)
+                    isOverlayShowing = true
+                    Log.d(TAG, "Overlay view added successfully")
                 }
-                true
+            } catch (e: Exception) {
+                Log.e(TAG, "Error adding overlay view", e)
+                isOverlayShowing = false
+                overlayView = null
             }
         }
-
-        overlayView = view
-        wm?.addView(view, params)
-        isOverlayShowing = true
     }
     
     private fun performTempUnlock() {
@@ -308,11 +417,19 @@ class OverlayService : Service() {
 
     fun hideOverlay() {
         if (!isOverlayShowing) return
-        overlayView?.let {
-            wm?.removeView(it)
+        Log.d(TAG, "hideOverlay called")
+        handler.post {
+            try {
+                overlayView?.let {
+                    wm?.removeView(it)
+                }
+                overlayView = null
+                isOverlayShowing = false
+                Log.d(TAG, "Overlay view removed successfully")
+            } catch (e: Exception) {
+                Log.e(TAG, "Error removing overlay view", e)
+            }
         }
-        overlayView = null
-        isOverlayShowing = false
     }
 
     private fun buildNotification(): Notification {

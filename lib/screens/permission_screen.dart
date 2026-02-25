@@ -16,6 +16,7 @@ class _PermissionScreenState extends State<PermissionScreen>
 
   bool _overlayGranted = false;
   bool _usageGranted = false;
+  bool _accessGranted = false;
   bool _checking = true;
 
   @override
@@ -47,6 +48,7 @@ class _PermissionScreenState extends State<PermissionScreen>
         setState(() {
           _overlayGranted = result['overlay'] ?? false;
           _usageGranted = result['usage'] ?? false;
+          _accessGranted = result['accessibility'] ?? false;
           _checking = false;
         });
       }
@@ -83,6 +85,14 @@ class _PermissionScreenState extends State<PermissionScreen>
     }
   }
 
+  Future<void> _requestAccessibility() async {
+    try {
+      await _channel.invokeMethod('openAccessibilitySettings');
+    } catch (e) {
+      debugPrint('Error requesting accessibility: $e');
+    }
+  }
+
   void _continue() {
     Navigator.of(context).pushReplacementNamed('/home');
   }
@@ -97,7 +107,7 @@ class _PermissionScreenState extends State<PermissionScreen>
     final bool forceSetup = args?['forceSetup'] ?? false;
 
     final bool allGranted =
-        _overlayGranted && _usageGranted; // Notification not needed
+        _overlayGranted && _usageGranted; // Accessibility recommended, not required
 
     return WillPopScope(
       onWillPop: () async {
@@ -166,6 +176,18 @@ class _PermissionScreenState extends State<PermissionScreen>
                               icon: Icons.data_usage_outlined,
                               isGranted: _usageGranted,
                               onTap: _usageGranted ? null : _requestUsage,
+                            ),
+
+                            const SizedBox(height: 16),
+
+                            _buildPermissionItem(
+                              context,
+                              title: "Accessibility Service (Recommended)",
+                              description:
+                                  "Improves reliability of app detection on some devices.",
+                              icon: Icons.visibility_outlined,
+                              isGranted: _accessGranted,
+                              onTap: _accessGranted ? null : _requestAccessibility,
                             ),
                           ],
                         ),
