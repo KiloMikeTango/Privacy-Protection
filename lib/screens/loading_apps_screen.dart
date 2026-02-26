@@ -118,12 +118,12 @@ class _LoadingAppsScreenState extends State<LoadingAppsScreen> {
                   LinearProgressIndicator(
                     value: _progress,
                     minHeight: 8,
-                    backgroundColor: colorScheme.surfaceVariant,
+                    backgroundColor: colorScheme.surfaceDim,
                     color: colorScheme.primary,
                   ),
                   const SizedBox(height: AppTheme.spacingMd),
                   Text(
-                    'Preparing apps… $pct%',
+                    'Loading apps… $pct%',
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: colorScheme.onSurface,

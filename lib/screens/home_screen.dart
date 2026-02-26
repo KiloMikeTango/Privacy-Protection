@@ -294,41 +294,19 @@ class _HomeScreenState extends State<HomeScreen> {
                 Positioned(
                   top: 8,
                   right: 8,
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      IconButton(
-                        icon: Icon(
-                          _running ? Icons.visibility : Icons.visibility_off,
-                          color: _running
-                              ? AppTheme.success
-                              : colorScheme.secondary,
+                  child: PopupMenuButton<String>(
+                    icon: Icon(Icons.more_vert, color: colorScheme.secondary),
+                    onSelected: (value) {
+                      if (value == 'toggle_icon') {
+                        _setLauncherVisible(!_launcherVisible);
+                      }
+                    },
+                    itemBuilder: (context) => [
+                      PopupMenuItem(
+                        value: 'toggle_icon',
+                        child: Text(
+                          _launcherVisible ? 'Hide app icon' : 'Show app icon',
                         ),
-                        onPressed: _busy ? null : _toggle,
-                        tooltip: _running
-                            ? 'Disable protection'
-                            : 'Enable protection',
-                      ),
-                      PopupMenuButton<String>(
-                        icon: Icon(
-                          Icons.more_vert,
-                          color: colorScheme.secondary,
-                        ),
-                        onSelected: (value) {
-                          if (value == 'toggle_icon') {
-                            _setLauncherVisible(!_launcherVisible);
-                          }
-                        },
-                        itemBuilder: (context) => [
-                          PopupMenuItem(
-                            value: 'toggle_icon',
-                            child: Text(
-                              _launcherVisible
-                                  ? 'Hide app icon'
-                                  : 'Show app icon',
-                            ),
-                          ),
-                        ],
                       ),
                     ],
                   ),

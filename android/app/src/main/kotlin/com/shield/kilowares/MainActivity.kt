@@ -18,6 +18,7 @@ import androidx.security.crypto.MasterKeys
 import android.util.Log
 import android.view.accessibility.AccessibilityManager
 import android.content.ComponentName
+import android.content.pm.ShortcutManager
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -63,7 +64,7 @@ class MainActivity : FlutterActivity() {
                 }
                 "setLauncherVisible" -> {
                     val visible = (call.arguments as? Boolean) ?: true
-                    val alias = ComponentName(this, "com.shield.kilowares.LauncherAlias")
+                    val alias = ComponentName(packageName, "$packageName.LauncherAlias")
                     val state = if (visible)
                         PackageManager.COMPONENT_ENABLED_STATE_ENABLED
                     else
@@ -73,10 +74,30 @@ class MainActivity : FlutterActivity() {
                         state,
                         PackageManager.DONT_KILL_APP
                     )
+                    if (!visible) {
+                        try {
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N_MR1) {
+                                val sm = getSystemService(ShortcutManager::class.java)
+                                sm.removeAllDynamicShortcuts()
+                                val ids = sm.pinnedShortcuts.map { it.id }
+                                if (ids.isNotEmpty()) sm.disableShortcuts(ids)
+                            }
+                        } catch (_: Exception) { }
+                        try {
+                            packageManager.clearPackagePreferredActivities(packageName)
+                        } catch (_: Exception) { }
+                        try {
+                            val home = Intent(Intent.ACTION_MAIN).apply {
+                                addCategory(Intent.CATEGORY_HOME)
+                                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                            }
+                            startActivity(home)
+                        } catch (_: Exception) { }
+                    }
                     result.success(true)
                 }
                 "isLauncherVisible" -> {
-                    val alias = ComponentName(this, "com.shield.kilowares.LauncherAlias")
+                    val alias = ComponentName(packageName, "$packageName.LauncherAlias")
                     val state = packageManager.getComponentEnabledSetting(alias)
                     val visible = state == PackageManager.COMPONENT_ENABLED_STATE_ENABLED ||
                             state == PackageManager.COMPONENT_ENABLED_STATE_DEFAULT

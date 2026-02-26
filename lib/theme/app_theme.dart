@@ -48,7 +48,7 @@ class AppTheme {
         color: secondary,
       ),
       labelLarge: GoogleFonts.inter(
-        fontSize: 14,
+        fontSize: 16,
         fontWeight: FontWeight.w600,
         letterSpacing: 0.2,
       ),
