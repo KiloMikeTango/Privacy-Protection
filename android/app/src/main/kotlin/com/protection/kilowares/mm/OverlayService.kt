@@ -179,6 +179,9 @@ class OverlayService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if (intent?.action == ACTION_UPDATE_CONFIG) {
+            reloadConfig()
+        }
         // Monitoring will decide when to show/hide the overlay
         return START_STICKY
     }

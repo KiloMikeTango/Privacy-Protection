@@ -160,8 +160,20 @@ class MainActivity : FlutterActivity() {
                     val packages = (call.arguments as? List<*>)?.map { it.toString() } ?: emptyList()
                     val prefs = securePrefs()
                     prefs.edit().putStringSet(keyProtected, packages.toSet()).apply()
-                    // Notify service to reload
-                    sendBroadcast(Intent(OverlayService.ACTION_UPDATE_CONFIG))
+                    // Notify service to reload (explicit intent ensures delivery)
+                    try {
+                        val updateIntent = Intent(this, OverlayService::class.java).apply {
+                            action = OverlayService.ACTION_UPDATE_CONFIG
+                        }
+                        startService(updateIntent)
+                    } catch (_: Exception) {
+                        try {
+                            val b = Intent(OverlayService.ACTION_UPDATE_CONFIG).apply {
+                                `package` = packageName
+                            }
+                            sendBroadcast(b)
+                        } catch (_: Exception) { }
+                    }
                     // Auto re-enable: if service is not active but permissions are granted, start it
                     if (!OverlayService.isServiceActive) {
                         val overlayOk = Settings.canDrawOverlays(this)
@@ -187,8 +199,20 @@ class MainActivity : FlutterActivity() {
                     val s = pattern.joinToString(",")
                     val prefs = securePrefs()
                     prefs.edit().putString(keySecretPattern, s).apply()
-                    // Notify service to reload
-                    sendBroadcast(Intent(OverlayService.ACTION_UPDATE_CONFIG))
+                    // Notify service to reload (explicit intent ensures delivery)
+                    try {
+                        val updateIntent = Intent(this, OverlayService::class.java).apply {
+                            action = OverlayService.ACTION_UPDATE_CONFIG
+                        }
+                        startService(updateIntent)
+                    } catch (_: Exception) {
+                        try {
+                            val b = Intent(OverlayService.ACTION_UPDATE_CONFIG).apply {
+                                `package` = packageName
+                            }
+                            sendBroadcast(b)
+                        } catch (_: Exception) { }
+                    }
                     result.success(true)
                 }
                 "getSecretPattern" -> {
