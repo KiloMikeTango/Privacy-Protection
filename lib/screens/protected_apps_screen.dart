@@ -191,7 +191,7 @@ class _ProtectedAppsScreenState extends State<ProtectedAppsScreen> {
         _listKeyUnprotected.currentState?.removeItem(
           removeIndex,
           (context, animation) => _buildRemovedItem(app, animation, false),
-          duration: const Duration(milliseconds: 300),
+          duration: const Duration(milliseconds: 380),
         );
       }
 
@@ -210,7 +210,7 @@ class _ProtectedAppsScreenState extends State<ProtectedAppsScreen> {
         _listKeyProtected.currentState?.removeItem(
           removeIndex,
           (context, animation) => _buildRemovedItem(app, animation, true),
-          duration: const Duration(milliseconds: 300),
+          duration: const Duration(milliseconds: 380),
         );
       }
 
@@ -445,10 +445,12 @@ class _ProtectedAppsScreenState extends State<ProtectedAppsScreen> {
           final app = apps[index];
           return AnimationConfiguration.staggeredList(
             position: index,
-            duration: const Duration(milliseconds: 375),
+            duration: const Duration(milliseconds: 450),
             child: SlideAnimation(
-              verticalOffset: 50.0,
+              verticalOffset: 24.0,
+              curve: Curves.easeOutCubic,
               child: FadeInAnimation(
+                curve: Curves.easeInOut,
                 child: Padding(
                   padding: const EdgeInsets.symmetric(
                     horizontal: AppTheme.spacingMd,
@@ -481,10 +483,14 @@ class _ProtectedAppsScreenState extends State<ProtectedAppsScreen> {
         if (index >= apps.length) return const SizedBox();
         final app = apps[index];
 
+        final curved = CurvedAnimation(
+          parent: animation,
+          curve: Curves.easeInOutCubic,
+        );
         return FadeTransition(
-          opacity: animation,
+          opacity: curved,
           child: SizeTransition(
-            sizeFactor: animation,
+            sizeFactor: curved,
             child: Padding(
               padding: const EdgeInsets.symmetric(
                 horizontal: AppTheme.spacingMd,
@@ -508,10 +514,14 @@ class _ProtectedAppsScreenState extends State<ProtectedAppsScreen> {
     Animation<double> animation,
     bool wasProtected,
   ) {
+    final curved = CurvedAnimation(
+      parent: animation,
+      curve: Curves.easeInOutCubic,
+    );
     return FadeTransition(
-      opacity: animation,
+      opacity: curved,
       child: SizeTransition(
-        sizeFactor: animation,
+        sizeFactor: curved,
         child: Padding(
           padding: const EdgeInsets.symmetric(
             horizontal: AppTheme.spacingMd,

@@ -10,7 +10,8 @@ class LoadingAppsScreen extends StatefulWidget {
   State<LoadingAppsScreen> createState() => _LoadingAppsScreenState();
 }
 
-class _LoadingAppsScreenState extends State<LoadingAppsScreen> {
+class _LoadingAppsScreenState extends State<LoadingAppsScreen>
+    with SingleTickerProviderStateMixin {
   static const MethodChannel _channel = MethodChannel('privacy_protection');
 
   double _progress = 0.0;
@@ -18,29 +19,42 @@ class _LoadingAppsScreenState extends State<LoadingAppsScreen> {
   bool _protectedDone = false;
   bool _appsDone = false;
   bool _minDelayDone = false;
-  Timer? _ticker;
+  AnimationController? _progressController;
   List<dynamic> _protected = const [];
   List<dynamic> _apps = const [];
 
   @override
   void initState() {
     super.initState();
-    _startTicker();
+    _initProgressController();
     _startMinDelay();
     _loadData();
   }
 
-  void _startTicker() {
-    _ticker = Timer.periodic(const Duration(milliseconds: 50), (_) {
-      if (!mounted) return;
-      if (_progress < _target) {
-        final next = (_progress + 0.02).clamp(0.0, 1.0);
-        setState(() {
-          _progress = next;
+  void _initProgressController() {
+    _progressController =
+        AnimationController(
+          vsync: this,
+          value: 0.0,
+          duration: const Duration(milliseconds: 400),
+        )..addListener(() {
+          if (!mounted) return;
+          setState(() {
+            _progress = _progressController!.value;
+          });
+          _tryNavigate();
         });
-      }
-      _tryNavigate();
-    });
+  }
+
+  void _animateToTarget(double t) {
+    _target = t.clamp(0.0, 1.0);
+    final delta = (_target - (_progressController?.value ?? 0.0)).abs();
+    final ms = (200 + (400 * delta)).toInt();
+    _progressController?.animateTo(
+      _target,
+      duration: Duration(milliseconds: ms),
+      curve: Curves.easeInOutCubic,
+    );
   }
 
   void _startMinDelay() async {
@@ -63,7 +77,7 @@ class _LoadingAppsScreenState extends State<LoadingAppsScreen> {
       }
     } catch (_) {}
     _protectedDone = true;
-    _target = _appsDone ? 1.0 : 0.4;
+    _animateToTarget(_appsDone ? 1.0 : 0.4);
     _tryNavigate();
   }
 
@@ -75,7 +89,7 @@ class _LoadingAppsScreenState extends State<LoadingAppsScreen> {
       }
     } catch (_) {}
     _appsDone = true;
-    _target = 1.0;
+    _animateToTarget(1.0);
     _tryNavigate();
   }
 
@@ -83,7 +97,7 @@ class _LoadingAppsScreenState extends State<LoadingAppsScreen> {
     if (!_minDelayDone) return;
     if (!_protectedDone || !_appsDone) return;
     if (_progress < 1.0) return;
-    _ticker?.cancel();
+    // Progress controller drives navigation; no timer to cancel
     if (!mounted) return;
     Navigator.of(context).pushReplacementNamed(
       '/protected',
@@ -93,7 +107,7 @@ class _LoadingAppsScreenState extends State<LoadingAppsScreen> {
 
   @override
   void dispose() {
-    _ticker?.cancel();
+    _progressController?.dispose();
     super.dispose();
   }
 
