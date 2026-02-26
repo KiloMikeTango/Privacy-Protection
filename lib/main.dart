@@ -8,7 +8,7 @@ import 'screens/permission_screen.dart';
 import 'screens/loading_apps_screen.dart';
 import 'theme/app_theme.dart';
 
-//TODO: Improve: Fix needing re-enable after adding app; Remove background notification feature
+//TODO: Improve: Remove background notification feature
 void main() {
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
