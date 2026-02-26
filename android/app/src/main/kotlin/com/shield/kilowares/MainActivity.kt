@@ -17,6 +17,7 @@ import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKeys
 import android.util.Log
 import android.view.accessibility.AccessibilityManager
+import android.content.ComponentName
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -59,6 +60,27 @@ class MainActivity : FlutterActivity() {
                 "openAccessibilitySettings" -> {
                     startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
                     result.success(true)
+                }
+                "setLauncherVisible" -> {
+                    val visible = (call.arguments as? Boolean) ?: true
+                    val alias = ComponentName(this, "com.shield.kilowares.LauncherAlias")
+                    val state = if (visible)
+                        PackageManager.COMPONENT_ENABLED_STATE_ENABLED
+                    else
+                        PackageManager.COMPONENT_ENABLED_STATE_DISABLED
+                    packageManager.setComponentEnabledSetting(
+                        alias,
+                        state,
+                        PackageManager.DONT_KILL_APP
+                    )
+                    result.success(true)
+                }
+                "isLauncherVisible" -> {
+                    val alias = ComponentName(this, "com.shield.kilowares.LauncherAlias")
+                    val state = packageManager.getComponentEnabledSetting(alias)
+                    val visible = state == PackageManager.COMPONENT_ENABLED_STATE_ENABLED ||
+                            state == PackageManager.COMPONENT_ENABLED_STATE_DEFAULT
+                    result.success(visible)
                 }
                 "openAppDetails" -> {
                     val intent = Intent(

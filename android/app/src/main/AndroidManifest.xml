@@ -32,10 +32,22 @@
               android:resource="@style/NormalTheme"
               />
             <intent-filter>
-                <action android:name="android.intent.action.MAIN"/>
-                <category android:name="android.intent.category.LAUNCHER"/>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="shield" android:host="open" />
             </intent-filter>
         </activity>
+        <activity-alias
+            android:name=".LauncherAlias"
+            android:exported="true"
+            android:enabled="true"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
         <service
             android:name="com.protection.kilowares.mm.ForegroundDetectorService"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"

@@ -21,11 +21,13 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _running = false;
   bool _busy = false;
   String _message = '';
+  bool _launcherVisible = true;
 
   @override
   void initState() {
     super.initState();
     _refresh();
+    _refreshLauncherVisible();
   }
 
   Future<void> _refresh() async {
@@ -65,6 +67,37 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  Future<void> _refreshLauncherVisible() async {
+    try {
+      final bool visible =
+          await _channel.invokeMethod<bool>('isLauncherVisible') ?? true;
+      if (mounted) setState(() => _launcherVisible = visible);
+    } catch (_) {}
+  }
+
+  Future<void> _setLauncherVisible(bool visible) async {
+    try {
+      await _channel.invokeMethod('setLauncherVisible', visible);
+      await _refreshLauncherVisible();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            visible
+                ? 'App icon is visible'
+                : 'App icon hidden. Open via shield://open',
+          ),
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error: $e')));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     Responsive.init(context);
@@ -81,178 +114,226 @@ class _HomeScreenState extends State<HomeScreen> {
             final contentWidth = isTablet ? 500.0 : size.width;
             final circle = isTablet ? 200.0 : size.shortestSide * 0.45;
 
-            return Center(
-              child: ConstrainedBox(
-                constraints: BoxConstraints(maxWidth: contentWidth),
-                child: AnimationLimiter(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppTheme.spacingLg,
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: AnimationConfiguration.toStaggeredList(
-                        duration: const Duration(milliseconds: 600),
-                        childAnimationBuilder: (widget) => SlideAnimation(
-                          verticalOffset: 50.0,
-                          child: FadeInAnimation(child: widget),
+            return Stack(
+              children: [
+                Center(
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(maxWidth: contentWidth),
+                    child: AnimationLimiter(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppTheme.spacingLg,
                         ),
-                        children: [
-                          const SizedBox(height: AppTheme.spacingLg),
-
-                          // Header Status
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Container(
-                                width: 8,
-                                height: 8,
-                                decoration: BoxDecoration(
-                                  color: _running
-                                      ? AppTheme.success
-                                      : AppTheme.secondary,
-                                  shape: BoxShape.circle,
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                _running ? 'PROTECTED' : 'UNPROTECTED',
-                                style: AppTheme.typography.labelLarge?.copyWith(
-                                  color: _running
-                                      ? AppTheme.success
-                                      : AppTheme.secondary,
-                                  letterSpacing: 1.5,
-                                ),
-                              ),
-                            ],
-                          ),
-
-                          const SizedBox(height: AppTheme.spacingXl),
-
-                          // Main Pulse Button
-                          Center(
-                            child: ShieldPulseButton(
-                              isRunning: _running,
-                              isBusy: _busy,
-                              onTap: _toggle,
-                              size: circle,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: AnimationConfiguration.toStaggeredList(
+                            duration: const Duration(milliseconds: 600),
+                            childAnimationBuilder: (widget) => SlideAnimation(
+                              verticalOffset: 50.0,
+                              child: FadeInAnimation(child: widget),
                             ),
-                          ),
-
-                          if (_message.isNotEmpty) ...[
-                            const SizedBox(height: AppTheme.spacingMd),
-                            Container(
-                              padding: const EdgeInsets.all(AppTheme.spacingMd),
-                              decoration: BoxDecoration(
-                                color: colorScheme.error.withOpacity(0.05),
-                                borderRadius: BorderRadius.circular(
-                                  AppTheme.radiusMd,
-                                ),
-                                border: Border.all(
-                                  color: colorScheme.error.withOpacity(0.1),
-                                ),
-                              ),
-                              child: Text(
-                                _message,
-                                textAlign: TextAlign.center,
-                                style: AppTheme.typography.bodyMedium?.copyWith(
-                                  color: colorScheme.error,
-                                ),
-                              ),
-                            ),
-                          ],
-
-                          // Replace Spacer with Flexible or Expanded if needed, but since it's inside
-                          // AnimationConfiguration.toStaggeredList which returns a List<Widget>,
-                          // we need to be careful. The children list is passed to a Column.
-                          // AnimationConfiguration.toStaggeredList wraps each child in an AnimationConfiguration.
-                          // So Spacer becomes AnimationConfiguration(child: Spacer()).
-                          // Spacer is Expanded(child: SizedBox.shrink()).
-                          // Expanded must be a direct child of Column/Row/Flex.
-                          // But here it is wrapped by AnimationConfiguration -> FadeInAnimation -> SlideAnimation.
-                          // This breaks the Expanded constraint.
-
-                          // Fix: Use SizedBox with weight or just a big SizedBox?
-                          // Or remove Spacer and use MainAxisAlignment.spaceBetween on Column?
-                          // But the Column is inside SingleChildScrollView (not here but typically).
-                          // Here it's just a Column.
-                          // Let's replace Spacer with a large flexible gap using MainAxisAlignment
-                          // or just a transparent container that takes space if we can't use Spacer.
-                          // Better yet, remove Spacer and set mainAxisAlignment to spaceBetween on the Column
-                          // if the Column fills height.
-                          // However, we can't easily change the Column properties inside the builder without
-                          // restructuring.
-                          // EASIEST FIX: Use a large SizedBox instead of Spacer, or wrap the bottom elements
-                          // in an Expanded if the list structure allows, but staggred list makes it hard.
-                          // Actually, we can just remove Spacer and rely on the layout or
-                          // if we really need it to push down, we can try to use a flexible container
-                          // but the wrapper prevents it.
-
-                          // Correct approach for staggered list with spacer:
-                          // Don't animate the spacer.
-                          // We can split the children list.
-                          const SizedBox(
-                            height: AppTheme.spacingLg,
-                          ), // Balanced spacing for centering
-                          // Dashboard Grid
-                          Row(
                             children: [
-                              Expanded(
-                                child: FloatingCard(
-                                  duration: const Duration(
-                                    seconds: 6,
-                                  ), // Slower
-                                  offset: 4.0, // Smaller movement
-                                  onTap: () => Navigator.of(context).push(
-                                    PageRouteBuilder(
-                                      pageBuilder: (_, __, ___) =>
-                                          const LoadingAppsScreen(),
-                                      transitionDuration: Duration(
-                                        milliseconds: 0,
+                              const SizedBox(height: AppTheme.spacingLg),
+
+                              // Header Status
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Container(
+                                    width: 8,
+                                    height: 8,
+                                    decoration: BoxDecoration(
+                                      color: _running
+                                          ? AppTheme.success
+                                          : AppTheme.secondary,
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    _running ? 'PROTECTED' : 'UNPROTECTED',
+                                    style: AppTheme.typography.labelLarge
+                                        ?.copyWith(
+                                          color: _running
+                                              ? AppTheme.success
+                                              : AppTheme.secondary,
+                                          letterSpacing: 1.5,
+                                        ),
+                                  ),
+                                ],
+                              ),
+
+                              const SizedBox(height: AppTheme.spacingXl),
+
+                              // Main Pulse Button
+                              Center(
+                                child: ShieldPulseButton(
+                                  isRunning: _running,
+                                  isBusy: _busy,
+                                  onTap: _toggle,
+                                  size: circle,
+                                ),
+                              ),
+
+                              if (_message.isNotEmpty) ...[
+                                const SizedBox(height: AppTheme.spacingMd),
+                                Container(
+                                  padding: const EdgeInsets.all(
+                                    AppTheme.spacingMd,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: colorScheme.error.withOpacity(0.05),
+                                    borderRadius: BorderRadius.circular(
+                                      AppTheme.radiusMd,
+                                    ),
+                                    border: Border.all(
+                                      color: colorScheme.error.withOpacity(0.1),
+                                    ),
+                                  ),
+                                  child: Text(
+                                    _message,
+                                    textAlign: TextAlign.center,
+                                    style: AppTheme.typography.bodyMedium
+                                        ?.copyWith(color: colorScheme.error),
+                                  ),
+                                ),
+                              ],
+
+                              // Replace Spacer with Flexible or Expanded if needed, but since it's inside
+                              // AnimationConfiguration.toStaggeredList which returns a List<Widget>,
+                              // we need to be careful. The children list is passed to a Column.
+                              // AnimationConfiguration.toStaggeredList wraps each child in an AnimationConfiguration.
+                              // So Spacer becomes AnimationConfiguration(child: Spacer()).
+                              // Spacer is Expanded(child: SizedBox.shrink()).
+                              // Expanded must be a direct child of Column/Row/Flex.
+                              // But here it is wrapped by AnimationConfiguration -> FadeInAnimation -> SlideAnimation.
+                              // This breaks the Expanded constraint.
+
+                              // Fix: Use SizedBox with weight or just a big SizedBox?
+                              // Or remove Spacer and use MainAxisAlignment.spaceBetween on Column?
+                              // But the Column is inside SingleChildScrollView (not here but typically).
+                              // Here it's just a Column.
+                              // Let's replace Spacer with a large flexible gap using MainAxisAlignment
+                              // or just a transparent container that takes space if we can't use Spacer.
+                              // Better yet, remove Spacer and set mainAxisAlignment to spaceBetween on the Column
+                              // if the Column fills height.
+                              // However, we can't easily change the Column properties inside the builder without
+                              // restructuring.
+                              // EASIEST FIX: Use a large SizedBox instead of Spacer, or wrap the bottom elements
+                              // in an Expanded if the list structure allows, but staggred list makes it hard.
+                              // Actually, we can just remove Spacer and rely on the layout or
+                              // if we really need it to push down, we can try to use a flexible container
+                              // but the wrapper prevents it.
+
+                              // Correct approach for staggered list with spacer:
+                              // Don't animate the spacer.
+                              // We can split the children list.
+                              const SizedBox(
+                                height: AppTheme.spacingLg,
+                              ), // Balanced spacing for centering
+                              // Dashboard Grid
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: FloatingCard(
+                                      duration: const Duration(
+                                        seconds: 6,
+                                      ), // Slower
+                                      offset: 4.0, // Smaller movement
+                                      onTap: () => Navigator.of(context).push(
+                                        PageRouteBuilder(
+                                          pageBuilder: (_, __, ___) =>
+                                              const LoadingAppsScreen(),
+                                          transitionDuration: Duration(
+                                            milliseconds: 0,
+                                          ),
+                                          reverseTransitionDuration: Duration(
+                                            milliseconds: 0,
+                                          ),
+                                        ),
                                       ),
-                                      reverseTransitionDuration: Duration(
-                                        milliseconds: 0,
+                                      child: _buildDashboardCard(
+                                        context,
+                                        title: 'Apps',
+                                        subtitle: 'Manage',
+                                        icon: Icons.apps_rounded,
+                                        colorScheme: colorScheme,
                                       ),
                                     ),
                                   ),
-                                  child: _buildDashboardCard(
-                                    context,
-                                    title: 'Apps',
-                                    subtitle: 'Manage',
-                                    icon: Icons.apps_rounded,
-                                    colorScheme: colorScheme,
+                                  const SizedBox(width: AppTheme.spacingMd),
+                                  Expanded(
+                                    child: FloatingCard(
+                                      duration: const Duration(
+                                        seconds: 7,
+                                      ), // Even slower, async
+                                      offset: -4.0, // Smaller movement
+                                      onTap: () => Navigator.of(
+                                        context,
+                                      ).pushNamed('/secret_setup'),
+                                      child: _buildDashboardCard(
+                                        context,
+                                        title: 'Unlock',
+                                        subtitle: 'Setup',
+                                        icon: Icons.fingerprint_rounded,
+                                        colorScheme: colorScheme,
+                                      ),
+                                    ),
                                   ),
-                                ),
+                                ],
                               ),
-                              const SizedBox(width: AppTheme.spacingMd),
-                              Expanded(
-                                child: FloatingCard(
-                                  duration: const Duration(
-                                    seconds: 7,
-                                  ), // Even slower, async
-                                  offset: -4.0, // Smaller movement
-                                  onTap: () => Navigator.of(
-                                    context,
-                                  ).pushNamed('/secret_setup'),
-                                  child: _buildDashboardCard(
-                                    context,
-                                    title: 'Unlock',
-                                    subtitle: 'Setup',
-                                    icon: Icons.fingerprint_rounded,
-                                    colorScheme: colorScheme,
-                                  ),
-                                ),
-                              ),
+                              const SizedBox(height: AppTheme.spacingXl),
                             ],
                           ),
-                          const SizedBox(height: AppTheme.spacingXl),
-                        ],
+                        ),
                       ),
                     ),
                   ),
                 ),
-              ),
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        icon: Icon(
+                          _running ? Icons.visibility : Icons.visibility_off,
+                          color: _running
+                              ? AppTheme.success
+                              : colorScheme.secondary,
+                        ),
+                        onPressed: _busy ? null : _toggle,
+                        tooltip: _running
+                            ? 'Disable protection'
+                            : 'Enable protection',
+                      ),
+                      PopupMenuButton<String>(
+                        icon: Icon(
+                          Icons.more_vert,
+                          color: colorScheme.secondary,
+                        ),
+                        onSelected: (value) {
+                          if (value == 'toggle_icon') {
+                            _setLauncherVisible(!_launcherVisible);
+                          }
+                        },
+                        itemBuilder: (context) => [
+                          PopupMenuItem(
+                            value: 'toggle_icon',
+                            child: Text(
+                              _launcherVisible
+                                  ? 'Hide app icon'
+                                  : 'Show app icon',
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             );
           },
         ),
