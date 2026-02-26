@@ -42,14 +42,6 @@ class MainActivity : FlutterActivity() {
                         startActivity(intent)
                         result.success(false)
                     } else {
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                            if (checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-                                requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 1001)
-                                result.success(false)
-                                return@setMethodCallHandler
-                            }
-                        }
-                        
                         if (!hasUsageAccess()) {
                             startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
                             result.success(false)
@@ -111,11 +103,7 @@ class MainActivity : FlutterActivity() {
                 "checkPermissions" -> {
                     val overlay = Settings.canDrawOverlays(this)
                     val usage = hasUsageAccess()
-                    val notification = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                        checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
-                    } else {
-                        true
-                    }
+                    val notification = true
                     val accessibility = isAccessibilityEnabled()
                     val map = mapOf(
                         "overlay" to overlay,
