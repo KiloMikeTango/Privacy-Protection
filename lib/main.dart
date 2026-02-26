@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'screens/home_screen.dart';
 import 'screens/protected_apps_screen.dart';
 import 'screens/secret_setup_screen.dart';
@@ -7,8 +8,19 @@ import 'screens/permission_screen.dart';
 import 'screens/loading_apps_screen.dart';
 import 'theme/app_theme.dart';
 
-//TODO: Improve: Fix needing re-enable after adding app; Show loading before installed apps are loaded and navigate to the screen; Make the navigation bar white; Remove background notification feature
+//TODO: Improve: Fix needing re-enable after adding app; Make the navigation bar white; Remove background notification feature
 void main() {
+  SystemChrome.setSystemUIOverlayStyle(
+    const SystemUiOverlayStyle(
+      statusBarColor: AppTheme.background,
+      statusBarIconBrightness: Brightness.dark,
+      statusBarBrightness: Brightness.light,
+      systemNavigationBarColor: AppTheme.background,
+      systemNavigationBarIconBrightness: Brightness.dark,
+      systemNavigationBarDividerColor: AppTheme.background,
+      systemNavigationBarContrastEnforced: false,
+    ),
+  );
   runApp(const PrivacyProtectionApp());
 }
 
@@ -21,6 +33,18 @@ class PrivacyProtectionApp extends StatelessWidget {
       title: 'Shield',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
+      builder: (context, child) => AnnotatedRegion<SystemUiOverlayStyle>(
+        value: const SystemUiOverlayStyle(
+          statusBarColor: AppTheme.background,
+          statusBarIconBrightness: Brightness.dark,
+          statusBarBrightness: Brightness.light,
+          systemNavigationBarColor: AppTheme.background,
+          systemNavigationBarIconBrightness: Brightness.dark,
+          systemNavigationBarDividerColor: AppTheme.background,
+          systemNavigationBarContrastEnforced: false,
+        ),
+        child: child!,
+      ),
       routes: {
         '/': (_) => const SplashScreen(),
         '/home': (_) => const HomeScreen(),

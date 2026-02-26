@@ -366,6 +366,10 @@ class OverlayService : Service() {
             android.graphics.PixelFormat.TRANSLUCENT
         )
         params.gravity = Gravity.TOP or Gravity.START
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            params.layoutInDisplayCutoutMode =
+                WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+        }
 
         // Ensure we're running on the main thread for UI operations
         handler.post {
@@ -400,6 +404,11 @@ class OverlayService : Service() {
                             true
                         }
                     }
+                    view.fitsSystemWindows = false
+                    view.systemUiVisibility =
+                        View.SYSTEM_UI_FLAG_LAYOUT_STABLE or
+                                View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or
+                                View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
                     overlayView = view
                     wm?.addView(view, params)
                     isOverlayShowing = true
