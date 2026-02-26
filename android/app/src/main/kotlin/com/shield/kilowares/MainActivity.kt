@@ -131,6 +131,19 @@ class MainActivity : FlutterActivity() {
                     prefs.edit().putStringSet(keyProtected, packages.toSet()).apply()
                     // Notify service to reload
                     sendBroadcast(Intent(OverlayService.ACTION_UPDATE_CONFIG))
+                    // Auto re-enable: if service is not active but permissions are granted, start it
+                    if (!OverlayService.isServiceActive) {
+                        val overlayOk = Settings.canDrawOverlays(this)
+                        val usageOk = hasUsageAccess()
+                        if (overlayOk && usageOk) {
+                            val serviceIntent = Intent(this, OverlayService::class.java)
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                                startForegroundService(serviceIntent)
+                            } else {
+                                startService(serviceIntent)
+                            }
+                        }
+                    }
                     result.success(true)
                 }
                 "getProtectedApps" -> {

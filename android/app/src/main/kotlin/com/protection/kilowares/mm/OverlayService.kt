@@ -84,6 +84,8 @@ class OverlayService : Service() {
         secretPattern = loadSecretPattern()
         Log.d(TAG, "Config reloaded. Protected packages count: ${protectedPackages.size}")
         Log.d(TAG, "Protected packages: $protectedPackages")
+        // Reset any temporary unlock so newly protected apps lock immediately
+        unlockedPackage = null
         
         // Ensure monitoring is active after config reload
         startMonitoring()
