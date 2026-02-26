@@ -7,6 +7,7 @@ import '../widgets/shield_pulse_button.dart';
 import '../widgets/floating_card.dart';
 import '../utils/responsive.dart';
 import '../theme/app_theme.dart';
+import 'loading_apps_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -203,9 +204,18 @@ class _HomeScreenState extends State<HomeScreen> {
                                     seconds: 6,
                                   ), // Slower
                                   offset: 4.0, // Smaller movement
-                                  onTap: () => Navigator.of(
-                                    context,
-                                  ).pushNamed('/apps_loading'),
+                                  onTap: () => Navigator.of(context).push(
+                                    PageRouteBuilder(
+                                      pageBuilder: (_, __, ___) =>
+                                          const LoadingAppsScreen(),
+                                      transitionDuration: Duration(
+                                        milliseconds: 0,
+                                      ),
+                                      reverseTransitionDuration: Duration(
+                                        milliseconds: 0,
+                                      ),
+                                    ),
+                                  ),
                                   child: _buildDashboardCard(
                                     context,
                                     title: 'Apps',
