@@ -90,6 +90,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: AnimationConfiguration.toStaggeredList(
                         duration: const Duration(milliseconds: 600),
                         childAnimationBuilder: (widget) => SlideAnimation(
@@ -97,7 +98,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           child: FadeInAnimation(child: widget),
                         ),
                         children: [
-                          const SizedBox(height: AppTheme.spacing2Xl),
+                          const SizedBox(height: AppTheme.spacingLg),
 
                           // Header Status
                           Row(
@@ -126,7 +127,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             ],
                           ),
 
-                          const SizedBox(height: AppTheme.spacing2Xl),
+                          const SizedBox(height: AppTheme.spacingXl),
 
                           // Main Pulse Button
                           Center(
@@ -170,7 +171,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           // Expanded must be a direct child of Column/Row/Flex.
                           // But here it is wrapped by AnimationConfiguration -> FadeInAnimation -> SlideAnimation.
                           // This breaks the Expanded constraint.
-                          
+
                           // Fix: Use SizedBox with weight or just a big SizedBox?
                           // Or remove Spacer and use MainAxisAlignment.spaceBetween on Column?
                           // But the Column is inside SingleChildScrollView (not here but typically).
@@ -181,18 +182,18 @@ class _HomeScreenState extends State<HomeScreen> {
                           // if the Column fills height.
                           // However, we can't easily change the Column properties inside the builder without
                           // restructuring.
-                          // EASIEST FIX: Use a large SizedBox instead of Spacer, or wrap the bottom elements 
+                          // EASIEST FIX: Use a large SizedBox instead of Spacer, or wrap the bottom elements
                           // in an Expanded if the list structure allows, but staggred list makes it hard.
                           // Actually, we can just remove Spacer and rely on the layout or
-                          // if we really need it to push down, we can try to use a flexible container 
+                          // if we really need it to push down, we can try to use a flexible container
                           // but the wrapper prevents it.
-                          
+
                           // Correct approach for staggered list with spacer:
                           // Don't animate the spacer.
                           // We can split the children list.
-                          
-                          const SizedBox(height: 40), // Use fixed spacing instead of Spacer to avoid error
-                          
+                          const SizedBox(
+                            height: AppTheme.spacingLg,
+                          ), // Balanced spacing for centering
                           // Dashboard Grid
                           Row(
                             children: [
@@ -204,7 +205,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   offset: 4.0, // Smaller movement
                                   onTap: () => Navigator.of(
                                     context,
-                                  ).pushNamed('/protected'),
+                                  ).pushNamed('/apps_loading'),
                                   child: _buildDashboardCard(
                                     context,
                                     title: 'Apps',
@@ -235,7 +236,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                             ],
                           ),
-                          const SizedBox(height: AppTheme.spacing2Xl),
+                          const SizedBox(height: AppTheme.spacingXl),
                         ],
                       ),
                     ),
@@ -248,6 +249,8 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
+
+  Future<void> _openProtectedApps() async {}
 
   Widget _buildDashboardCard(
     BuildContext context, {

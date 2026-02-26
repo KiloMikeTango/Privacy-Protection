@@ -27,6 +27,7 @@ class _ProtectedAppsScreenState extends State<ProtectedAppsScreen> {
   bool _loading = true;
   String _message = '';
   String _query = '';
+  bool _initializedFromArgs = false;
 
   @override
   void initState() {
@@ -36,7 +37,43 @@ class _ProtectedAppsScreenState extends State<ProtectedAppsScreen> {
         _query = _searchCtrl.text;
       });
     });
-    _load();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_initializedFromArgs) return;
+    final args =
+        ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+    final appsArg = args?['apps'];
+    final protArg = args?['protected'];
+    if (appsArg is List && protArg is List) {
+      try {
+        _apps = appsArg
+            .map((e) => AppInfo.fromMap(Map<String, dynamic>.from(e as Map)))
+            .toList();
+        _protected = protArg.map((e) => e.toString()).toSet();
+        _apps.sort(
+          (a, b) => a.appName.toLowerCase().compareTo(b.appName.toLowerCase()),
+        );
+        _protectedListData = _apps
+            .where((a) => _protected.contains(a.packageName))
+            .toList();
+        _unprotectedListData = _apps
+            .where((a) => !_protected.contains(a.packageName))
+            .toList();
+        _listKeyProtected = GlobalKey();
+        _listKeyUnprotected = GlobalKey();
+        setState(() {
+          _loading = false;
+        });
+      } catch (_) {
+        _load();
+      }
+    } else {
+      _load();
+    }
+    _initializedFromArgs = true;
   }
 
   @override
@@ -212,80 +249,95 @@ class _ProtectedAppsScreenState extends State<ProtectedAppsScreen> {
     return Scaffold(
       backgroundColor: colorScheme.background,
       body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: BoxConstraints(maxWidth: Responsive.maxContentWidth),
-            child: Column(
-              children: [
-                _buildAppBar(context),
-                Expanded(
-                  child: RefreshIndicator(
-                    color: colorScheme.primary,
-                    backgroundColor: Colors.white,
-                    onRefresh: _load,
-                    child: CustomScrollView(
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      slivers: [
-                        SliverPadding(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: AppTheme.spacingMd,
-                            vertical: AppTheme.spacingSm,
-                          ),
-                          sliver: SliverList(
-                            delegate: SliverChildListDelegate([
-                              _buildSearchField(theme),
-                              const SizedBox(height: AppTheme.spacingMd),
-                              _buildStatsRow(theme, totalApps, protectedCount),
-                              if (_message.isNotEmpty) ...[
-                                const SizedBox(height: AppTheme.spacingSm),
-                                Text(
-                                  _message,
-                                  style: TextStyle(color: colorScheme.error),
-                                ),
-                              ],
-                              const SizedBox(height: AppTheme.spacingMd),
-                              if (_loading)
-                                LinearProgressIndicator(
-                                  backgroundColor: Colors.transparent,
-                                  color: colorScheme.primary,
-                                ),
-                            ]),
-                          ),
-                        ),
-                        if (!_loading) ...[
-                          if (protectedApps.isNotEmpty)
-                            _buildSectionHeader(context, 'Protected Apps'),
-
-                          if (isSearching)
-                            _buildAppList(protectedApps, true)
-                          else
-                            _buildAnimatedAppList(
-                              protectedApps,
-                              true,
-                              _listKeyProtected,
-                            ),
-
-                          if (unprotectedApps.isNotEmpty)
-                            _buildSectionHeader(context, 'Your Apps'),
-
-                          if (isSearching)
-                            _buildAppList(unprotectedApps, false)
-                          else
-                            _buildAnimatedAppList(
-                              unprotectedApps,
-                              false,
-                              _listKeyUnprotected,
-                            ),
-
-                          const SliverToBoxAdapter(child: SizedBox(height: 40)),
-                        ],
-                      ],
-                    ),
-                  ),
+        child: Stack(
+          children: [
+            Center(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxWidth: Responsive.maxContentWidth,
                 ),
-              ],
+                child: Column(
+                  children: [
+                    _buildAppBar(context),
+                    Expanded(
+                      child: RefreshIndicator(
+                        color: colorScheme.primary,
+                        backgroundColor: Colors.white,
+                        onRefresh: _load,
+                        child: CustomScrollView(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          slivers: [
+                            SliverPadding(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: AppTheme.spacingMd,
+                                vertical: AppTheme.spacingSm,
+                              ),
+                              sliver: SliverList(
+                                delegate: SliverChildListDelegate([
+                                  _buildSearchField(theme),
+                                  const SizedBox(height: AppTheme.spacingMd),
+                                  _buildStatsRow(
+                                    theme,
+                                    totalApps,
+                                    protectedCount,
+                                  ),
+                                  if (_message.isNotEmpty) ...[
+                                    const SizedBox(height: AppTheme.spacingSm),
+                                    Text(
+                                      _message,
+                                      style: TextStyle(
+                                        color: colorScheme.error,
+                                      ),
+                                    ),
+                                  ],
+                                  const SizedBox(height: AppTheme.spacingMd),
+                                ]),
+                              ),
+                            ),
+                            if (!_loading) ...[
+                              if (protectedApps.isNotEmpty)
+                                _buildSectionHeader(context, 'Protected Apps'),
+
+                              if (isSearching)
+                                _buildAppList(protectedApps, true)
+                              else
+                                _buildAnimatedAppList(
+                                  protectedApps,
+                                  true,
+                                  _listKeyProtected,
+                                ),
+
+                              if (unprotectedApps.isNotEmpty)
+                                _buildSectionHeader(context, 'Your Apps'),
+
+                              if (isSearching)
+                                _buildAppList(unprotectedApps, false)
+                              else
+                                _buildAnimatedAppList(
+                                  unprotectedApps,
+                                  false,
+                                  _listKeyUnprotected,
+                                ),
+
+                              const SliverToBoxAdapter(
+                                child: SizedBox(height: 40),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
-          ),
+            if (_loading)
+              Container(
+                color: Colors.white,
+                alignment: Alignment.center,
+                child: CircularProgressIndicator(color: colorScheme.primary),
+              ),
+          ],
         ),
       ),
     );

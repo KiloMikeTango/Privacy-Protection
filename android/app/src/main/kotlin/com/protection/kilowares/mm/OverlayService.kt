@@ -87,6 +87,10 @@ class OverlayService : Service() {
         
         // Ensure monitoring is active after config reload
         startMonitoring()
+        // Apply changes immediately based on current foreground app
+        try {
+            checkForegroundApp()
+        } catch (_: Exception) {}
     }
 
     private fun onTopPackageChanged(pkg: String?) {
