@@ -58,24 +58,25 @@ class _ShieldPulseButtonState extends State<ShieldPulseButton>
             return Transform.scale(
               scale: widget.isRunning ? _pulseAnimation.value : 1.0,
               child: AnimatedContainer(
-                duration: const Duration(milliseconds: 500),
+                duration: const Duration(milliseconds: 600),
+                curve: Curves.easeOutCubic,
                 width: ring,
                 height: ring,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: widget.isRunning
-                      ? colorScheme.primary.withOpacity(0.1)
+                      ? colorScheme.primary.withValues(alpha: 0.10)
                       : Colors.white,
                   boxShadow: [
                     if (widget.isRunning)
                       BoxShadow(
-                        color: colorScheme.primary.withOpacity(0.2),
-                        blurRadius: ring * 0.2,
+                        color: colorScheme.primary.withValues(alpha: 0.20),
+                        blurRadius: ring * 0.16,
                         spreadRadius: ring * 0.05,
                       )
                     else
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.03),
+                        color: Colors.black.withValues(alpha: 0.03),
                         blurRadius: ring * 0.1,
                         spreadRadius: ring * 0.02,
                       ),
@@ -90,6 +91,7 @@ class _ShieldPulseButtonState extends State<ShieldPulseButton>
           onTap: widget.isBusy ? null : widget.onTap,
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOutCubic,
             width: circle,
             height: circle,
             decoration: BoxDecoration(
@@ -98,8 +100,8 @@ class _ShieldPulseButtonState extends State<ShieldPulseButton>
               boxShadow: [
                 BoxShadow(
                   color: widget.isRunning
-                      ? colorScheme.primary.withOpacity(0.4)
-                      : Colors.black.withOpacity(0.1),
+                      ? colorScheme.primary.withValues(alpha: 0.40)
+                      : Colors.black.withValues(alpha: 0.10),
                   blurRadius: circle * 0.15,
                   offset: Offset(0, circle * 0.07),
                 ),
